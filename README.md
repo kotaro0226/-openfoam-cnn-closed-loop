@@ -97,34 +97,34 @@ $PROJECT_ROOT/
 │   │   └── ...
 │   ├── hypercubes/
 │   ├── viz/
-│   ├── snapshots/                # Output of SICKLE subsampling
-│   │   ├── subsampled_ofFace_x_random_random.npz
-│   │   ├── subsampled_ofFace_y_random_random.npz
-│   │   ├── subsampled_ofFace_z_random_random.npz
-│   │   └── subsampled_ofCell_random_random.npz
 │   └── plots/
 │
-└── smartsim-ml/                     # $WORKD (main working directory)
-    ├── wsl.bash
-    ├── slrum.sh
-    ├── srun.bash
-    ├── clean.bash
-    ├── Main_pype.py
-    ├── exp_openfoam.py           # SmartSim + OpenFOAM execution
-    ├── of_common.py              # Redis / OpenFOAM utilities
-    ├── make_cfd_dataset.py       # Redis → face-wise NPZ
-    ├── make_face_maps_from_C.py  # Cell-centers → structured face maps
-    ├── make_cell_maps.py         # Face maps & V → structured cell maps
-    ├── train.py                  # Training script
-    ├── benchmark_cfd.py
-    │
-    ├── archs/
-    │   └── mlp.py
-    │
-    │
-    ├── cfd_xy_2.4-2.8.npz        # Raw face-wise dataset
-    └── face_maps_rank0_internal.npz
-        # map_x, map_y, map_z, dims_cells, counts
+├── smartsim-ml/                  # $WORKD (main working directory)
+│   ├── wsl.bash
+│   ├── slrum.sh
+│   ├── srun.bash
+│   ├── clean.bash
+│   ├── Main_pype.py
+│   ├── exp_openfoam.py           # SmartSim + OpenFOAM execution
+│   ├── of_common.py              # Redis / OpenFOAM utilities
+│   ├── make_cfd_dataset.py       # Redis → face-wise NPZ
+│   ├── make_face_maps_from_C.py  # Cell-centers → structured face maps
+│   ├── make_cell_maps.py         # Face maps & V → structured cell maps
+│   ├── train.py                  # Training script
+│   ├── benchmark_cfd.py
+│   │
+│   └── archs/
+│       └── mlp.py
+│
+└──data/
+    ├── maps                     # Maps of faces & cells, dims_cells, counts 
+    │   ├── cell_maps_rank0_internal.npz
+    │   └── face_maps_rank0_internal.npz
+    ├── of_raw                   # Raw face-wise dataset
+    │   └── cfd_xy.npz
+    └── sampled                  # Sampled data
+        └── subsampled_ofCell_random_random.npz
+
 ```
 
 ---
