@@ -1,0 +1,35 @@
+
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState Boussinesq;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+mixture
+{
+    specie
+    {
+        nMoles      1;
+        molWeight   28.96;
+    }
+    transport
+    {
+        mu          1e-5;      // dynamic viscosity [Pa·s]
+        Pr          0.71;
+    }
+    thermodynamics
+    {
+        Cp          1005;
+        Hf          0;
+    }
+    equationOfState
+    {
+        rho0        1.0;
+        beta        3.0e-3;
+        T0          300;
+    }
+}

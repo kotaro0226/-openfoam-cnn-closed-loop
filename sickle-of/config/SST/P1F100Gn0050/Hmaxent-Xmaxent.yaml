@@ -1,0 +1,35 @@
+shared:
+  dims: 3
+  dtype: sst-binary
+  noseed: true
+  input_vars: [rhoy]
+  output_vars: [ee]
+  cluster_var: [rhoy]
+  timesteps: [1.0]
+  nx: 4098
+  ny: 1024
+  nz: 4096
+  gravity: y
+  fileprefix: "SST-P1F100Gn0050-t{timesteps[0]}-H{hypercubes}-cubes{num_hypercubes}-X{method}-ns{num_samples}-window{window}_Y{target}"
+
+subsample:
+  hypercubes: maxent  # maxent or random
+  num_hypercubes: 4
+  method: maxent  # maxent or random or uips
+  path: /path/to/P1F100Gn0050/
+  num_samples: 210000
+  num_clusters: 5
+  nxsl: 64
+  nysl: 64
+  nzsl: 64
+  nxskip: 32
+  nyskip: 32
+  nzskip: 32
+
+train:
+  epochs: 1000
+  batch: 16
+  target: p
+  window: 1
+  arch: MLP_transformer
+  sequence: true

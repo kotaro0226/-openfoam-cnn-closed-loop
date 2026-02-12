@@ -1,0 +1,12 @@
+matplotlib==3.7.1
+numpy==1.23.5
+scikit-learn==1.2.2
+fluidfoam==0.2.5
+pyDOE==0.3.8
+pydmd==0.4.1
+pytorch==1.13.1
+python-sensors==0.3.5
+networkx==3.1
+pyyaml==6.0
+mpi4py==3.1.4
+corner==2.2.1

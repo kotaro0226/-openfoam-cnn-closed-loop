@@ -1,0 +1,214 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     buoyantBoussinesqPimpleFoam;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         0.4;
+deltaT          1e-3;
+
+writeControl    timeStep;
+writeInterval   200;
+purgeWrite      0;
+libs            ("libutilityFunctionObjects.so");
+
+functions
+{
+
+//    pUPhiTest
+//    {
+//        type fieldsToSmartRedis;
+//        libs ("libsmartredisFunctionObjects.so");
+//        clusterMode off;
+//        fields (U p phi);
+//        patches (internal);
+//    }
+
+    pEqnInnerTest
+    {
+        type fieldsToSmartRedis;
+        libs ("libsmartredisFunctionObjects.so");
+        clusterMode off;
+        fields (rAUf_ml phiHbyA_ml divPhiHbyA_f_ml pEqnFlux_ml);
+        patches (internal);
+    }
+
+    KEavg
+    {
+        type            fieldExpression;
+        libs            ("libfieldFunctionObjects.so");
+
+        // Field expression: scalar average of kinetic energy
+        valueType       scalar;
+        expression      "average(0.5*magSqr(U))";
+
+        // Control of execution
+        executeControl  timeStep;
+        executeInterval 1;
+        writeControl    timeStep;
+        writeInterval   1;
+
+        // Output options
+        name            KEavg;        // required for naming the folder
+        log             yes;          // print to stdout
+        write           yes;          // write to file
+        enabled         true;
+    }
+
+    kineticEnergy
+    {
+        type        coded;
+        libs        ("libutilityFunctionObjects.so");
+        name        kineticEnergy;
+
+        // only output once per timestep (not every subiteration)
+        executeControl  writeTime;    // only execute once per write interval
+        writeControl    writeTime;    // ensures writing matches time step output
+
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+
+        codeExecute
+        #{
+            // Write only once per time step, even if solver iterates
+            static scalar lastWriteTime = -1;
+
+            scalar currentTime = runTime.time().value();
+
+            if (currentTime != lastWriteTime)
+            {
+                scalar KE_total = 0.5 * gSum(magSqr(U) * mesh.V());
+                scalar KE_volAvg = KE_total / gSum(mesh.V());
+
+                if (Pstream::master())
+                {
+                    static OFstream csvFile("postProcessing/kineticEnergy/KE.csv");
+                    csvFile << runTime.timeName() << "," 
+                            << KE_total << "," 
+                            << KE_volAvg << nl;
+                }
+
+                lastWriteTime = currentTime;
+            }
+        #};
+
+        // ---- OPTIONAL: constants if you don't have a 'rho' field ----
+        // Set useBoussinesq to 'true' to compute rho = rhoRef*(1 - beta*(T - TRef))
+        // otherwise it will use constant rhoRef when no 'rho' field exists.
+        codeDict
+        #{
+            useBoussinesq  true;
+            rhoRef         1.0;      // kg/m3
+            beta           0.00033;  // 1/K
+            TRef           300;      // K
+            csvPath        "postProcessing/kineticEnergy/KE.csv";
+        #};
+
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};
+
+        codeLibs
+        #{
+            -lfiniteVolume -lmeshTools
+        #};
+
+        // run at every time step (adjust as desired)
+        writeControl timeStep;
+        writeInterval 1;
+
+        codeExecute
+        #{
+            const fvMesh& m = mesh();
+
+            // velocity
+            const volVectorField& U = m.lookupObject<volVectorField>("U");
+
+            // check for rho
+            const bool haveRho = m.foundObject<volScalarField>("rho");
+
+            // read dictionary
+            const dictionary& d = dict();
+            const bool useBoussinesq = Switch(d.lookupOrDefault("useBoussinesq", false));
+            const scalar rhoRef = d.lookupOrDefault<scalar>("rhoRef", 1.0);
+            const scalar beta   = d.lookupOrDefault<scalar>("beta", 0.0);
+            const scalar TRef   = d.lookupOrDefault<scalar>("TRef", 300.0);
+            const fileName csvPath = d.lookupOrDefault<fileName>("csvPath", "postProcessing/kineticEnergy/KE.csv");
+
+            tmp<volScalarField> tKeDens;
+
+            if (haveRho)
+            {
+                const volScalarField& rho = m.lookupObject<volScalarField>("rho");
+                tKeDens = 0.5*rho*magSqr(U);
+            }
+            else if (useBoussinesq)
+            {
+                const volScalarField& T = m.lookupObject<volScalarField>("T");
+                volScalarField rhoB
+                (
+                    IOobject("rhoB", time().timeName(), m, IOobject::NO_READ, IOobject::NO_WRITE),
+                    rhoRef*(1.0 - beta*(T - TRef))
+                );
+                tKeDens = 0.5*rhoB*magSqr(U);
+            }
+            else
+            {
+                tKeDens = 0.5*rhoRef*magSqr(U);
+            }
+
+            const volScalarField& keDens = tKeDens();
+
+            const scalarField& V = m.V();
+            const scalar KE_total = gSum( keDens.internalField()*V );
+            const scalar V_total = gSum(V);
+            const scalar KE_avg  = KE_total / V_total;
+
+            Info<< "KE_total = " << KE_total << " J,  KE_volAvg = " << KE_avg << " J/m^3" << nl << endl;
+
+            // ensure directory exists
+            mkDir(csvPath.path());
+
+            // append to CSV
+            OFstream os(csvPath, IOstreamOption(), IOstreamOption::APPEND);
+
+            if (time().timeName() == "0")
+            {
+                os << "time,KE_total[J],KE_volAvg[J/m3]\n";
+            }
+
+            os << time().timeName() << "," << KE_total << "," << KE_avg << "\n";
+        #};
+
+    }
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,32 @@
+shared:
+  dims: 3
+  dtype: sst-binary
+  noseed: true
+  input_vars: [u, v, w]
+  output_vars: r
+  cluster_var: [u, v, w]
+  nx: 37634
+  ny: 4704
+  nz: 37632
+  gravity: y
+  fileprefix: "SST-Pi50-H{hypercubes}-cubes{num_hypercubes}-X{method}-ns{num_samples}-window{window}"
+
+subsample:
+  hypercubes: random
+  num_hypercubes: 32
+  method: uips
+  path: /path/to/PiF050Gn0050/
+  num_samples: 3277
+  num_clusters: 20
+  nxsl: 32
+  nysl: 32
+  nzsl: 32
+
+train:
+  epochs: 1000
+  batch: 16
+  patience: 100
+  target: p_full
+  window: 1
+  arch: MLP_transformer
+  sequence: true

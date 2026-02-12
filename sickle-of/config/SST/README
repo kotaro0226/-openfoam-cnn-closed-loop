@@ -1,0 +1,6 @@
+All cases to run:
+1. Xfull-Yfull.yaml   # baseline reconstruction
+2. Xsample-Yfull.yaml # sample reconstruction
+3. P1F4R32-Xfull-Yglobal.yaml
+4. P1F4R32-Xsample-Yglobal.yaml
+5. P1F4R32-Xsample-Ysample.yaml

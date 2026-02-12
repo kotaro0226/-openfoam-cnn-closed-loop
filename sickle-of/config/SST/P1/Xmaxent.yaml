@@ -1,0 +1,31 @@
+shared:
+  dims: 3
+  dtype: sst-binary
+  noseed: true
+  input_vars: [u, v, w, r]
+  output_vars: [p, pv]
+  cluster_var: [p, pv]
+  nx: 514
+  ny: 512
+  nz: 256
+  gravity: z
+  fileprefix: "SST-P1-H{hypercubes}-cubes{num_hypercubes}-X{method}-ns{num_samples}-window{window}"
+
+subsample:
+  hypercubes: random
+  num_hypercubes: 1
+  method: maxent  # or random
+  path: /path/to/P1F4R32_testing/raw_data/
+  num_samples: 100
+  num_clusters: 20
+  nxsl: 32
+  nysl: 32
+  nzsl: 32 
+
+train:
+  epochs: 1000
+  batch: 16
+  target: p_full
+  window: 1
+  arch: MLP_transformer
+  sequence: true

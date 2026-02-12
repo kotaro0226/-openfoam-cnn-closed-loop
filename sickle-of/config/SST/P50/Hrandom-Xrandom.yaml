@@ -1,0 +1,32 @@
+shared:
+  dims: 3
+  dtype: sst-binary
+  noseed: true
+  input_vars: [u, v, w]
+  output_vars: r
+  cluster_var: [u, v, w]
+  nx: 3586
+  ny: 3584
+  nz: 1792
+  gravity: y
+  fileprefix: "SST-P50-H{hypercubes}-cubes{num_hypercubes}-X{method}-ns{num_samples}-window{window}"
+
+subsample:
+  hypercubes: random
+  num_hypercubes: 32
+  method: random
+  path: /path/to/P50F4R32/
+  num_samples: 1000
+  num_clusters: 20
+  nxsl: 32
+  nysl: 32
+  nzsl: 32
+
+train:
+  epochs: 1000
+  batch: 16
+  patience: 100
+  target: p_full
+  window: 1
+  arch: MLP_transformer
+  sequence: true

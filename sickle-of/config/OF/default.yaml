@@ -1,0 +1,23 @@
+
+shared:
+  dims: 3
+  dtype: openfoam
+  noseed: true
+  output_vars: drag
+  cluster_var: wz
+  fileprefix: "2dcyl-method={method}"
+
+subsample:
+  method: maxent # random or uips
+  path: /path/to/data/cylinder
+  num_samples: 1080
+  num_clusters: 20
+
+train:
+  epochs: 100
+  batch: 4
+  patience: 100
+  target: p
+  window: 2
+  arch: lstm
+  sequence: true

@@ -1,0 +1,3 @@
+[submodule "contrib"]
+	path = contrib
+	url = git@code.ornl.gov:autosm/sickle-contrib.git

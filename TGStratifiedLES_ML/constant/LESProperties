@@ -1,0 +1,9 @@
+
+LESModel        WALE;
+delta           cubeRootVol;
+printCoeffs     on;
+
+WALECoeffs
+{
+    Cw          0.325;
+}

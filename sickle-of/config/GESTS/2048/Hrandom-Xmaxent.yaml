@@ -1,0 +1,31 @@
+shared:
+  dims: 3
+  dtype: gests
+  noseed: true
+  input_vars: [velocity, dissipation]
+  output_vars: pressure
+  cluster_var: enstrophy
+  nx: 1024
+  ny: 1024
+  nz: 1024
+  gravity: z
+  fileprefix: "GESTS-H{hypercubes}-cubes{num_hypercubes}-X{method}-ns{num_samples}-window{window}"
+
+subsample:
+  hypercubes: random
+  num_hypercubes: 1
+  method: maxent
+  path: /path/to/phy_cube_data/2048
+  num_samples: 1638
+  num_clusters: 20
+  nxsl: 32
+  nysl: 32
+  nzsl: 32 
+
+train:
+  epochs: 1000
+  batch: 16
+  patience: 20
+  target: p_full
+  window: 1
+  arch: MLP_transformer
