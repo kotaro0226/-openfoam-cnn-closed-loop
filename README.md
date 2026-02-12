@@ -100,7 +100,6 @@ $PROJECT_ROOT/
 │   └── plots/
 │
 ├── smartsim-ml/                  # $WORKD (main working directory)
-│   ├── wsl.bash
 │   ├── slrum.sh
 │   ├── srun.bash
 │   ├── clean.bash
