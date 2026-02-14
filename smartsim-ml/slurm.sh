@@ -5,7 +5,7 @@
 #SBATCH -p batch
 #SBATCH -N 1
 #SBATCH -S 0
-#SBATCH -t 00:20:00
+#SBATCH -t 01:00:00
 #SBATCH -o /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.out
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 

@@ -6,10 +6,10 @@
 EXE1 = 0        # 1: Exe exp_openfoam.py
 EXE2 = 0        # 1: Exe make dataset & maps
 MKMAP = 0       # 1: EXE make maps
-SAMPLE_MODE = 1 # 1: Cell-wise / 2: Face-wise
+SAMPLE_MODE = 1 # 1: Cell-wise / ##Invalid##2: Face-wise
 EXE3 = 0        # 1: Exe sampling
-EXE4 = 0        # 1: Exe train.py
-EXE5 = 1        # 1: inference/benchmark
+EXE4 = 1        # 1: Exe train.py
+EXE5 = 1        # 1: Exe inference
 
 
 from smartsim import Experiment
@@ -119,43 +119,43 @@ try:
             ], check=True, cwd=SICKLE_ROOT)
     
     
-        elif SAMPLE_MODE == 2:
-            # ============================================================
-            # Face-wise subsampling (directional, legacy pipeline)
-            # - Uses run_sickle_subsample.py wrapper
-            # - Executed separately for x / y / z face directions
-            # - Output NPZ contains independent face samples only
-            #   (no cell connectivity information)
-            # ============================================================
-            subprocess.run([
-                "python", "run_sickle_subsample.py",
-                # Root directory of SICKLE repository
-                "--sickle_root", f"{SICKLE_ROOT}",
-                # Data type: OpenFOAM face-wise dataset
-                "--dtype", "of-face-npz",
-                # Face-wise CFD features/labels
-                "--xy_npz", f"{DATAD}/of-raw/cfd_xy_2.4-2.8.npz",
-                # Face center maps for structured indexing
-                "--maps_npz", f"{DATAD}/maps/face_maps_rank0_internal.npz",
-                # Index of clustering variable in X
-                "--cv_index", "2",
-                # Hypercube selection strategy
-                "--hypercubes", "random",
-                # Subsampling method inside hypercube
-                "--method", "random",
-                # Number of hypercubes per timestep
-                "--num_hypercubes", "32",
-                # Number of sampled faces per hypercube
-                "--num_samples", "1000",
-                # Structured grid size for each sampled cube
-                "--nxsl", "16", "--nysl", "16", "--nzsl", "16",
-                # Temporal window size
-                "--window", "1",
-                # Output directory for subsampled NPZ
-                "--output_dir", f"{DATAD}/sampled",
-                # File name template (direction expanded by wrapper)
-                "--fileprefix", "ofFace_{direction}_{hypercubes}_{method}",
-            ], check=True)
+        #elif SAMPLE_MODE == 2:
+        #    # ============================================================
+        #    # Face-wise subsampling (directional, legacy pipeline)
+        #    # - Uses run_sickle_subsample.py wrapper
+        #    # - Executed separately for x / y / z face directions
+        #    # - Output NPZ contains independent face samples only
+        #    #   (no cell connectivity information)
+        #    # ============================================================
+        #    subprocess.run([
+        #        "python", "run_sickle_subsample.py",
+        #        # Root directory of SICKLE repository
+        #        "--sickle_root", f"{SICKLE_ROOT}",
+        #        # Data type: OpenFOAM face-wise dataset
+        #        "--dtype", "of-face-npz",
+        #        # Face-wise CFD features/labels
+        #        "--xy_npz", f"{DATAD}/of-raw/cfd_xy_2.4-2.8.npz",
+        #        # Face center maps for structured indexing
+        #        "--maps_npz", f"{DATAD}/maps/face_maps_rank0_internal.npz",
+        #        # Index of clustering variable in X
+        #        "--cv_index", "2",
+        #        # Hypercube selection strategy
+        #        "--hypercubes", "random",
+        #        # Subsampling method inside hypercube
+        #        "--method", "random",
+        #        # Number of hypercubes per timestep
+        #        "--num_hypercubes", "32",
+        #        # Number of sampled faces per hypercube
+        #        "--num_samples", "1000",
+        #        # Structured grid size for each sampled cube
+        #        "--nxsl", "16", "--nysl", "16", "--nzsl", "16",
+        #        # Temporal window size
+        #        "--window", "1",
+        #        # Output directory for subsampled NPZ
+        #        "--output_dir", f"{DATAD}/sampled",
+        #        # File name template (direction expanded by wrapper)
+        #        "--fileprefix", "ofFace_{direction}_{hypercubes}_{method}",
+        #    ], check=True)
 
 
     #4 Train
@@ -190,11 +190,23 @@ try:
                 "--fields-per-face", "3",    # Number of input features per face (e.g., rAUf, phiHbyA, divPhiHbyA)
     
                 # MLP architecture
-                "--hidden", "64", "64",       # Hidden layer sizes (shared across all faces)
+                "--hidden", "32", "32",       # Hidden layer sizes (shared across all faces)
                 "--act", "tanh",              # Activation function
-    
                 # Output
-                "--save-jit", f"{DATAD}/jit/mlp_cell_h64-64.jit",  # Saved TorchScript model
+                "--save-jit", f"{DATAD}/jit/mlp_cell_h32-32.jit",  # Saved TorchScript model
+ 
+                "--dropout", "0.05",
+                
+                "--split", "0.8,0.1,0.1",
+                "--seed", "1234",
+                "--split-save", f"{DATAD}/splits/split_cell_seed1234.npz",
+                
+                "--fit-norm",
+                "--norm-path", f"{DATAD}/stats/norm_cell_h32-32.npz",
+                #"--split-load", f"{DATAD}/splits/split_cell_seed1234.npz",
+                #"--load-norm",
+                #"--norm-path", f"{DATAD}/stats/norm_cell_h64-64.npz",
+
             ], check=True)
     
         # ==========================================================
@@ -204,87 +216,124 @@ try:
         #   - No explicit cell-level physics constraints
         #   - Equivalent to standard face-wise regression
         # ==========================================================
-        elif SAMPLE_MODE == 2:
-            subprocess.run([
-                "python", "train.py", "mlp",
-                "--src", "sickle",
+        #elif SAMPLE_MODE == 2:
+        #    subprocess.run([
+        #        "python", "train.py", "mlp",
+        #        "--src", "sickle",
     
-                # Input datasets:
-                # Face-based NPZ files sampled along x, y, and z orientations
-                "--sickle_x", f"{DATAD}/sampled/subsampled_ofFace_x_random_random.npz",
-                "--sickle_y", f"{DATAD}/sampled/subsampled_ofFace_y_random_random.npz",
-                "--sickle_z", f"{DATAD}/sampled/subsampled_ofFace_z_random_random.npz",
+        #        # Input datasets:
+        #        # Face-based NPZ files sampled along x, y, and z orientations
+        #        "--sickle_x", f"{DATAD}/sampled/subsampled_ofFace_x_random_random.npz",
+        #        "--sickle_y", f"{DATAD}/sampled/subsampled_ofFace_y_random_random.npz",
+        #        "--sickle_z", f"{DATAD}/sampled/subsampled_ofFace_z_random_random.npz",
     
-                # Training control
-                "--batch", "16384",           # Batch size in terms of number of faces
-                "--epochs", "3",              # Number of training epochs
-                "--lr", "1e-3",               # Learning rate for Adam optimizer
+        #        # Training control
+        #        "--batch", "16384",           # Batch size in terms of number of faces
+        #        "--epochs", "3",              # Number of training epochs
+        #        "--lr", "1e-3",               # Learning rate for Adam optimizer
     
-                # MLP architecture
-                "--hidden", "16", "16",        # Hidden layer sizes
-                "--act", "tanh",               # Activation function
+        #        # MLP architecture
+        #        "--hidden", "16", "16",        # Hidden layer sizes
+        #        "--act", "tanh",               # Activation function
     
-                # Output
-                "--save-jit", f"{DATAD}/jit/mlp_face_h16-16.jit",  # Saved TorchScript model
-            ], check=True)
+        #        # Output
+        #        "--save-jit", f"{DATAD}/jit/mlp_face_h16-16.jit",  # Saved TorchScript model
+        #    ], check=True)
 
 
     #5 get model , flow field and Inference
     if EXE5:
-        # ---- hardcode for now (edit here when sweeping arch) ----
-        jit = f"{DATAD}/jit/mlp_cell_h64-64.jit"
-        #jit = f"{DATAD}/jit/mlp_face_h64-64.jit"
-        raw_npz  = f"{DATAD}/of_raw/cfd_xy_2.0-2.4.npz"          # Before sub-sampling
-        cell_npz = f"{DATAD}/maps/cell_maps_rank0_internal.npz"
-        out_npz  = f"{DATAD}/pred/pred_pEqnFlux_allfaces_64-64.npz"
-        metrics_csv = f"{DATAD}/infer/infer_metrics.csv"
+
+        #
+        #5 cell-wise evaluation (Train/Val/Test split based)
+        jit = f"{DATAD}/jit/mlp_cell_h32-32.jit"
+    
+        # subsampled cell dataset (label may change: random_random etc.)
+        cell_npz = f"{DATAD}/sampled/subsampled_ofCell_random_random.npz"
+    
+        # split + norm produced by train.py
+        split_npz = f"{DATAD}/splits/split_cell_seed1234.npz"
+        norm_path = f"{DATAD}/stats/norm_cell_h32-32.npz"
+    
+        metrics_csv = f"{DATAD}/infer/eval_cell_metrics.csv"
+        pred_npz    = f"{DATAD}/pred/eval_cell_test_pred_h64-64.npz"  # optional
     
         # switches (edit here)
-        DO_CONT_EVAL = 1
-        TSPEC = "0:100"              # "all", "0,1,2", "10:20"
-        BATCH_FACES = 1048576
+        WHICH = "test"          # train / val / test
+        SAVE_PRED = 1           # 1: save pred_npz
     
-        # ---- optional: safety check (recommended) ----
-        if DO_CONT_EVAL:
-            import numpy as np
-            z = np.load(raw_npz, allow_pickle=True)
-            X = z["X"]
-            cm = np.load(cell_npz, allow_pickle=True)
-            mx = int(cm["cell_faces_idx"].max())
-            nf = int(X.shape[1])
-            print(f"[INFO] RAW X.shape={X.shape}")
-            print(f"[INFO] cell_faces_idx max={mx}  raw Nf={nf}")
-            if mx >= nf:
-                raise RuntimeError(
-                    "Face indexing mismatch: cell_maps refers to face id outside raw dataset.\n"
-                    "Check make_cfd_dataset.py output (internal faces only?) and face_maps/cell_maps consistency."
-                )
+        cmd = [
+            "python", "-u", "eval_cell.py",
+            "--jit", jit,
+            "--cell_npz", cell_npz,
+            "--split_npz", split_npz,
+            "--which", WHICH,
+            "--norm_path", norm_path,
+            "--batch_cells", "8192",
+            "--fields_per_face", "3",
+            "--phi_in_face", "1",
+            "--metrics_csv", metrics_csv,
+        ]
+        if SAVE_PRED:
+            cmd += ["--save_pred_npz", pred_npz]
     
-        # ---- run inference ----
-        if DO_CONT_EVAL:
-            subprocess.run([
-                "python", "-u", "infer.py",
-                "--jit", jit,
-                "--dataset_npz", raw_npz,
-                "--timesteps", TSPEC,
-                "--batch_faces", str(BATCH_FACES),
-                "--out", out_npz,
-                "--metrics_csv", metrics_csv,
-                "--cont_eval",
-                "--cell_maps_npz", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
-                "--debug_stats",
-            ], check=True)
-        else:
-            subprocess.run([
-                "python", "-u", "infer.py",
-                "--jit", jit,
-                "--dataset_npz", raw_npz,
-                "--timesteps", TSPEC,
-                "--batch_faces", str(BATCH_FACES),
-                "--out", out_npz,
-                "--metrics_csv", metrics_csv,
-                "--cont_eval",
-            ], check=True)
+        subprocess.run(cmd, check=True)
+
+
+        ## ---- hardcode for now (edit here when sweeping arch) ----
+        #jit = f"{DATAD}/jit/mlp_cell_h64-64.jit"
+        ##jit = f"{DATAD}/jit/mlp_face_h64-64.jit"
+        #raw_npz  = f"{DATAD}/of_raw/cfd_xy_2.0-2.4.npz"          # Before sub-sampling
+        #cell_npz = f"{DATAD}/maps/cell_maps_rank0_internal.npz"
+        #out_npz  = f"{DATAD}/pred/pred_pEqnFlux_allfaces_64-64.npz"
+        #metrics_csv = f"{DATAD}/infer/infer_metrics.csv"
+    
+        ## switches (edit here)
+        #DO_CONT_EVAL = 1
+        #TSPEC = "0:100"              # "all", "0,1,2", "10:20"
+        #BATCH_FACES = 1048576
+    
+        ## ---- optional: safety check (recommended) ----
+        #if DO_CONT_EVAL:
+        #    import numpy as np
+        #    z = np.load(raw_npz, allow_pickle=True)
+        #    X = z["X"]
+        #    cm = np.load(cell_npz, allow_pickle=True)
+        #    mx = int(cm["cell_faces_idx"].max())
+        #    nf = int(X.shape[1])
+        #    print(f"[INFO] RAW X.shape={X.shape}")
+        #    print(f"[INFO] cell_faces_idx max={mx}  raw Nf={nf}")
+        #    if mx >= nf:
+        #        raise RuntimeError(
+        #            "Face indexing mismatch: cell_maps refers to face id outside raw dataset.\n"
+        #            "Check make_cfd_dataset.py output (internal faces only?) and face_maps/cell_maps consistency."
+        #        )
+    
+        ## ---- run inference ----
+        #if DO_CONT_EVAL:
+        #    subprocess.run([
+        #        "python", "-u", "infer.py",
+        #        "--jit", jit,
+        #        "--dataset_npz", raw_npz,
+        #        "--timesteps", TSPEC,
+        #        "--batch_faces", str(BATCH_FACES),
+        #        "--out", out_npz,
+        #        "--metrics_csv", metrics_csv,
+        #        "--cont_eval",
+        #        "--cell_maps_npz", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
+        #        "--debug_stats",
+        #    ], check=True)
+        #else:
+        #    subprocess.run([
+        #        "python", "-u", "infer.py",
+        #        "--jit", jit,
+        #        "--dataset_npz", raw_npz,
+        #        "--timesteps", TSPEC,
+        #        "--batch_faces", str(BATCH_FACES),
+        #        "--out", out_npz,
+        #        "--metrics_csv", metrics_csv,
+        #        "--cont_eval",
+        #    ], check=True)
 
 
     # --- End ---
