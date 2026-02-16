@@ -153,23 +153,69 @@ def sickle_xy_face(args):
 def sickle_xy_cell(npz_path: str):
     z = np.load(npz_path, allow_pickle=True)
 
-    X = z["X"]  # (T, Ns_cell, 18)
-    Y = z["Y"]  # (T, Ns_cell, 6)
+    # expected keys
+    if "X" not in z or "Y" not in z:
+        raise KeyError("CELL npz must include X and Y")
 
-    # NOTE: your SICKLE cell NPZ must contain these:
+    X = z["X"]  # expected (TB, Ns, 18)  where TB=T_effective*num_hypercubes
+    Y = z["Y"]  # expected (TB, Ns, 6)
+
+    # required extras for continuity loss
     if "V_sub_list" not in z or "cell_face_sign_sub_list" not in z:
         raise KeyError("CELL npz must include V_sub_list and cell_face_sign_sub_list")
 
-    V = np.asarray(z["V_sub_list"], dtype=np.float32)              # (T, Ns_cell)
-    S = np.asarray(z["cell_face_sign_sub_list"], dtype=np.float32) # (T, Ns_cell, 6)
+    V = z["V_sub_list"]
+    S = z["cell_face_sign_sub_list"]
 
-    T, Ns, Cin = X.shape
-    Cout = Y.shape[2]
+    # -----------------------------
+    # Safety: reject/convert object arrays
+    # -----------------------------
+    # After the new subsample save, V and S should be numeric arrays already.
+    # But we keep defensive conversion in case an old file sneaks in.
+    if V.dtype == object:
+        # try to stack: (TB,) of (Ns,) -> (TB,Ns)
+        V = np.stack([np.asarray(v, dtype=np.float32) for v in V], axis=0)
+    else:
+        V = np.asarray(V, dtype=np.float32)
 
-    Xf = X.reshape(T * Ns, Cin).astype(np.float32)        # (Ncells,18)
-    Yf = Y.reshape(T * Ns, Cout).astype(np.float32)       # (Ncells,6)
-    Vf = V.reshape(T * Ns).astype(np.float32)             # (Ncells,)
-    Sf = S.reshape(T * Ns, 6).astype(np.float32)          # (Ncells,6)
+    if S.dtype == object:
+        # (TB,) of (Ns,6) -> (TB,Ns,6)
+        S = np.stack([np.asarray(s, dtype=np.float32) for s in S], axis=0)
+    else:
+        # keep int8 if you want; float32 is fine too
+        S = np.asarray(S, dtype=np.float32)
+
+    X = np.asarray(X, dtype=np.float32)
+    Y = np.asarray(Y, dtype=np.float32)
+
+    # -----------------------------
+    # Shape checks (THIS is the main "fix")
+    # -----------------------------
+    if X.ndim != 3:
+        raise ValueError(f"X must be 3D (TB,Ns,Cin). got {X.shape}")
+    if Y.ndim != 3:
+        raise ValueError(f"Y must be 3D (TB,Ns,Cout). got {Y.shape}")
+    if V.ndim != 2:
+        raise ValueError(f"V_sub_list must be 2D (TB,Ns). got {V.shape}")
+    if S.ndim != 3:
+        raise ValueError(f"cell_face_sign_sub_list must be 3D (TB,Ns,6). got {S.shape}")
+
+    TB, Ns, Cin = X.shape
+    TB2, Ns2, Cout = Y.shape
+    if (TB2, Ns2) != (TB, Ns):
+        raise ValueError(f"X/Y mismatch: X={X.shape} Y={Y.shape}")
+    if V.shape != (TB, Ns):
+        raise ValueError(f"X/V mismatch: X={X.shape} V={V.shape}")
+    if S.shape[0] != TB or S.shape[1] != Ns or S.shape[2] != 6:
+        raise ValueError(f"X/S mismatch: X={X.shape} S={S.shape} (expected last dim=6)")
+
+    # -----------------------------
+    # Flatten to per-cell samples (same as your original logic)
+    # -----------------------------
+    Xf = X.reshape(TB * Ns, Cin)        # (Ncells, 18)
+    Yf = Y.reshape(TB * Ns, Cout)       # (Ncells, 6)
+    Vf = V.reshape(TB * Ns)             # (Ncells,)
+    Sf = S.reshape(TB * Ns, 6)          # (Ncells,6)
 
     ds = TensorDataset(
         torch.from_numpy(Xf),

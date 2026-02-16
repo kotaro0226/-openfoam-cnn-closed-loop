@@ -7,7 +7,7 @@ EXE1 = 0        # 1: Exe exp_openfoam.py
 EXE2 = 0        # 1: Exe make dataset & maps
 MKMAP = 0       # 1: EXE make maps
 SAMPLE_MODE = 1 # 1: Cell-wise / ##Invalid##2: Face-wise
-EXE3 = 0        # 1: Exe sampling
+EXE3 = 1        # 1: Exe sampling
 EXE4 = 1        # 1: Exe train.py
 EXE5 = 1        # 1: Exe inference
 
@@ -97,7 +97,7 @@ try:
                 # Data type: OpenFOAM cell-wise dataset with connectivity
                 "--dtype", "of-cell-npz",
                 # Face-wise CFD features/labels (rAUf, phiHbyA, divPhiHbyA, pEqnFlux)
-                "--xy_npz", f"{DATAD}/of-raw/cfd_xy_2.4-2.8.npz",
+                "--xy_npz", f"{DATAD}/of_raw/cfd_xy_2.0-2.4.npz",
                 # Cell-to-face connectivity, signs, and cell volumes
                 "--cell_npz", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
                 # Index of clustering variable in X (e.g., div(phiHbyA))
@@ -107,7 +107,7 @@ try:
                 # Subsampling method inside each hypercube
                 "--method", "random",
                 # Number of hypercubes per timestep
-                "--num_hypercubes", "32",
+                "--num_hypercubes", "16",
                 # Number of sampled cells per hypercube
                 "--num_samples", "1000",
                 # Temporal window size (1 = independent snapshots)
@@ -256,7 +256,7 @@ try:
         norm_path = f"{DATAD}/stats/norm_cell_h32-32.npz"
     
         metrics_csv = f"{DATAD}/infer/eval_cell_metrics.csv"
-        pred_npz    = f"{DATAD}/pred/eval_cell_test_pred_h64-64.npz"  # optional
+        pred_npz    = f"{DATAD}/pred/eval_cell_test_pred_h32-32.npz"  # optional
     
         # switches (edit here)
         WHICH = "test"          # train / val / test

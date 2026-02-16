@@ -36,47 +36,50 @@ def stats_line(name: str, a: np.ndarray) -> str:
         f"std={float(np.nanstd(a)):.6e}"
     )
 
-
 def load_cell_npz(npz_path: str):
     z = np.load(npz_path, allow_pickle=True)
     for k in ("X", "Y"):
         if k not in z.files:
             raise KeyError(f"{npz_path} missing '{k}'. keys={z.files}")
 
-    X = z["X"]  # (T, Ns_cell, 18)
-    Y = z["Y"]  # (T, Ns_cell, 6)
+    X = np.asarray(z["X"], dtype=np.float32)  # (TB,Ns,18)
+    Y = np.asarray(z["Y"], dtype=np.float32)  # (TB,Ns,6)
 
-    # Keys used in your current train.py expectation:
     if "V_sub_list" not in z.files or "cell_face_sign_sub_list" not in z.files:
         raise KeyError(
             f"{npz_path} must include 'V_sub_list' and 'cell_face_sign_sub_list'. keys={z.files}"
         )
 
-    V = np.asarray(z["V_sub_list"], dtype=np.float32)              # (T, Ns_cell)
-    S = np.asarray(z["cell_face_sign_sub_list"], dtype=np.float32) # (T, Ns_cell, 6)
+    V = z["V_sub_list"]
+    S = z["cell_face_sign_sub_list"]
+
+    # robust: numeric or object
+    if V.dtype == object:
+        V = np.stack([np.asarray(v, dtype=np.float32) for v in V], axis=0)
+    else:
+        V = np.asarray(V, dtype=np.float32)
+
+    if S.dtype == object:
+        S = np.stack([np.asarray(s, dtype=np.float32) for s in S], axis=0)
+    else:
+        S = np.asarray(S, dtype=np.float32)
 
     if X.ndim != 3 or Y.ndim != 3:
         raise ValueError(f"Expected X/Y with 3 dims. got X.shape={X.shape} Y.shape={Y.shape}")
 
-    T, Ns, Cin = X.shape
-    if Cin != 18:
-        # 18 = 6 faces * 3 fields-per-face (default)
-        # If you later change, this script supports it via args.
-        pass
+    TB, Ns, Cin = X.shape
+    if Y.shape != (TB, Ns, 6):
+        raise ValueError(f"Expected Y(TB,Ns,6). got Y.shape={Y.shape} vs X.shape={X.shape}")
+    if V.shape != (TB, Ns):
+        raise ValueError(f"Expected V(TB,Ns). got V.shape={V.shape}")
+    if S.shape != (TB, Ns, 6):
+        raise ValueError(f"Expected cell_face_sign_sub_list(TB,Ns,6). got S.shape={S.shape}")
 
-    if Y.shape[0] != T or Y.shape[1] != Ns or Y.shape[2] != 6:
-        raise ValueError(f"Expected Y(T,Ns,6). got Y.shape={Y.shape} vs X.shape={X.shape}")
-
-    if V.shape[0] != T or V.shape[1] != Ns:
-        raise ValueError(f"Expected V(T,Ns). got V.shape={V.shape}")
-    if S.shape[0] != T or S.shape[1] != Ns or S.shape[2] != 6:
-        raise ValueError(f"Expected cell_face_sign_sub_list(T,Ns,6). got S.shape={S.shape}")
-
-    # Flatten along time to match train.py behavior:
-    Xf = X.reshape(T * Ns, Cin).astype(np.float32)   # (Ncells,18)
-    Yf = Y.reshape(T * Ns, 6).astype(np.float32)     # (Ncells,6)
-    Vf = V.reshape(T * Ns).astype(np.float32)        # (Ncells,)
-    Sf = S.reshape(T * Ns, 6).astype(np.float32)     # (Ncells,6)
+    # Flatten along TB to match train.py behavior:
+    Xf = X.reshape(TB * Ns, Cin).astype(np.float32)  # (Ncells,18)
+    Yf = Y.reshape(TB * Ns, 6).astype(np.float32)    # (Ncells,6)
+    Vf = V.reshape(TB * Ns).astype(np.float32)       # (Ncells,)
+    Sf = S.reshape(TB * Ns, 6).astype(np.float32)    # (Ncells,6)
 
     ds = TensorDataset(
         torch.from_numpy(Xf),
