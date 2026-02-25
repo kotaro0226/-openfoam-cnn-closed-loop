@@ -83,7 +83,7 @@ def fetch_xy_over_time(
       Y_time: (T, N, Fy) float32
       info: dict with metadata and shapes
     """
-    client, _exp, _db, _of_case_name, fn_name = connect()
+    client, _exp, _of_case_name, fn_name = connect()
 
     client.poll_dataset(fn_name + "_metadata", 10, 1000)
     meta = client.get_dataset(fn_name + "_metadata")

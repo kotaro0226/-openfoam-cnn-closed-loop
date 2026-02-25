@@ -3,23 +3,38 @@
 #SBATCH -J OFRML_GRID
 #SBATCH -p extended
 ##SBATCH -p batch
-#SBATCH -N 4
-#SBATCH --gpus-per-node=4
-#SBATCH -S 0
-#SBATCH -t 03:00:00
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=8
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=7
+#SBATCH -t 02:00:00
 #SBATCH -o /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.out
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 
 # Setup
+export NODES=1
 module load PrgEnv-gnu
 module load cray-mpich
+module load rocm/6.3.1
 module load miniforge3/23.11.0-0
-conda activate sickle_env
+module unload libfabric
+module load libfabric/1.20.1
+module -t list
+conda activate gpu_env
 
-source /lustre/orion/scratch/shunya/gen053/src/OpenFOAM-v2312/etc/bashrc
+source /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/etc/bashrc
 export WM_MPLIB=CRAY-MPICH
 export WM_CC=cc
 export WM_CXX=CC
+
+#export SR_LOG_LEVEL=DEBUG
+#export SR_LOG_FILE=$WORKD/smartredis_client.log
+
+# Optimizations for inference
+export MIOPEN_USER_DB_PATH="/tmp/${USER}/my-miopen-cache"
+export MIOPEN_CUSTOM_CACHE_DIR=${MIOPEN_USER_DB_PATH}
+rm -rf ${MIOPEN_USER_DB_PATH}
+mkdir -p ${MIOPEN_USER_DB_PATH}
 
 # Existing project paths (same as slurm.sh)
 export HOMED="/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3"
@@ -33,7 +48,7 @@ export PORT=7000
 export IFACE="lo"
 
 # Optional: tweak grid by env without editing script
-HIDDEN_GRID=${HIDDEN_GRID:-"32;16,16;8,8,8"}
+HIDDEN_GRID=${HIDDEN_GRID:-"16;32,32;32,32,32"}
 LR_GRID=${LR_GRID:-"1e-3"}
 DROPOUT_GRID=${DROPOUT_GRID:-"0.05"}
 LAMBDA_CONT_GRID=${LAMBDA_CONT_GRID:-"0.0,1.0"}

@@ -20,18 +20,22 @@ PORT = int(os.environ["PORT"])
 HOMED = os.environ["HOMED"]
 DATAD = os.environ["DATAD"]
 IFACE = os.environ["IFACE"]
+NODES = os.environ["NODES"]
 WORKD = os.environ["WORKD"]
 CASED = os.environ["CASED"]
 FOAM_RUN = os.environ["FOAM_RUN"]
 SICKLE_ROOT = os.environ["SICKLE_ROOT"]
 
-exp = Experiment("ofrml", launcher="local", exp_path=WORKD)
-
+#exp = Experiment("ofrml", launcher="local", exp_path=WORKD)
+#db = exp.create_database(
+#    port=PORT,
+#    interface=IFACE
+#)
+exp = Experiment("ofrml", launcher="slurm", exp_path=WORKD)
 db = exp.create_database(
-    port=PORT,
-    interface=IFACE
+    db_nodes=f"NODES",
+    interface=["hsn0","hsn1","hsn2","hsn3"]
 )
-
 
 try:
     # --- start orchestrator ---

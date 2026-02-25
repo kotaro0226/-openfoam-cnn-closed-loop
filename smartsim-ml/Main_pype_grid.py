@@ -213,7 +213,7 @@ def main():
         train_cmd = [
             sys.executable,
             "-u",
-            "train.py",
+            "train_frontier.py",
             "mlp",
             "--src",
             "sickle",
@@ -259,7 +259,7 @@ def main():
         eval_cmd = [
             sys.executable,
             "-u",
-            "eval_cell.py",
+            "eval_cell_frontier.py",
             "--jit",
             jit_path,
             "--cell_npz",

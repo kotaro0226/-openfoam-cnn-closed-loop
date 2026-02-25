@@ -10,6 +10,7 @@
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 
 #Setup#
+export NODES=1
 module load PrgEnv-gnu
 module load cray-mpich
 module load miniforge3/23.11.0-0
