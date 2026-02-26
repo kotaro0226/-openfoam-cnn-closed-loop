@@ -41,12 +41,15 @@ if not os.path.isdir(polyMesh_dir):
     writeCellVolumes_model = exp.create_model(name="writeCellVolumes", run_settings=writeCellVolumes_settings)
     exp.start(writeCellVolumes_model, summary=True, block=True)
 
+#initialize
+#subprocess.run(["python", "initialize_T.py"], check=True, cwd=of_case_name)
+subprocess.run(["python", "initialize_T2.py"], check=True, cwd=of_case_name)
+#subprocess.run(["python", "initialize_U.py"], check=True, cwd=of_case_name)
+subprocess.run(["python", "initialize_U2.py"], check=True, cwd=of_case_name)
+
 else:
     print("[INFO] Existing mesh detected -> skip blockMesh / renumberMesh")
 
-#initialize
-subprocess.run(["python", "initialize_T.py"], check=True, cwd=of_case_name)
-subprocess.run(["python", "initialize_U.py"], check=True, cwd=of_case_name)
 
 # buoyantBoussinesqPimpleFoam_ML settings & model
 solve_settings = exp.create_run_settings(exe="buoyantBoussinesqPimpleFoam_ML", exe_args=f"-case {of_case_name}")

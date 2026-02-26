@@ -5,16 +5,16 @@
 ##SBATCH -p batch
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=8
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=8
 #SBATCH --cpus-per-task=7
-#SBATCH -t 02:00:00
+#SBATCH -t 00:45:00
 #SBATCH -o /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.out
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 
 # Setup
 export NODES=1
 module load PrgEnv-gnu
-module load cray-mpich
+module load cray-mpich/8.1.31
 module load rocm/6.3.1
 module load miniforge3/23.11.0-0
 module unload libfabric
@@ -55,6 +55,7 @@ LAMBDA_CONT_GRID=${LAMBDA_CONT_GRID:-"0.0,1.0"}
 EPOCHS=${EPOCHS:-3}
 BATCH=${BATCH:-8192}
 WHICH=${WHICH:-val}
+DDP_BACKEND=${DDP_BACKEND:-"nccl"}
 
 # Reuse existing subsampling output path from Main_pype.py
 CELL_NPZ=${CELL_NPZ:-"${DATAD}/sampled/subsampled_ofCell_random_random.npz"}
@@ -64,15 +65,52 @@ cd "$WORKD"
 mkdir -p "${DATAD}/grid"
 
 # Grid search (outputs under ${DATAD}/grid)
-time python -u Main_pype_grid.py \
-  --cell-npz "$CELL_NPZ" \
-  --hidden-grid "$HIDDEN_GRID" \
-  --lr-grid "$LR_GRID" \
-  --dropout-grid "$DROPOUT_GRID" \
-  --lambda-cont-grid "$LAMBDA_CONT_GRID" \
-  --epochs "$EPOCHS" \
-  --batch "$BATCH" \
-  --which "$WHICH" \
-  --outdir "${DATAD}/grid" \
-  --run-vis | tee log.grid.txt
+# Unified grid search (DDP-ready):
+# - default USE_TORCHRUN=0 keeps single-process behavior.
+# - set USE_TORCHRUN=1 to use torchrun (single/multi-node).
+USE_TORCHRUN=1
+USE_TORCHRUN=${USE_TORCHRUN:-0}
+
+
+if [ "$USE_TORCHRUN" = "1" ]; then
+  NNODES=${SLURM_NNODES:-1}
+  NPROC_PER_NODE=${SLURM_GPUS_PER_NODE:-1}
+  export MASTER_ADDR=$(hostname -i)
+  export NCCL_SOCKET_IFNAME=hsn0
+  export MASTER_PORT=3442
+
+  time srun --nodes="${NNODES}" --ntasks="${NNODES}" --ntasks-per-node=8 \
+    torchrun \
+      --nnodes="${NNODES}" \
+      --nproc_per_node="${NPROC_PER_NODE}" \
+      --node_rank="${SLURM_NODEID}" \
+      --rdzv_id="${SLURM_JOB_ID}" \
+      --rdzv_backend=c10d \
+      --rdzv_endpoint="${MASTER_ADDR}:${MASTER_PORT}" \
+      train_grid.py \
+      --ddp-backend "${DDP_BACKEND}" \
+      --cell-npz "$CELL_NPZ" \
+      --hidden-grid "$HIDDEN_GRID" \
+      --lr-grid "$LR_GRID" \
+      --dropout-grid "$DROPOUT_GRID" \
+      --lambda-cont-grid "$LAMBDA_CONT_GRID" \
+      --epochs "$EPOCHS" \
+      --batch "$BATCH" \
+      --which "$WHICH" \
+      --outdir "${DATAD}/grid" \
+      --run-vis | tee log.grid.txt
+else
+  time python -u train_grid.py \
+    --cell-npz "$CELL_NPZ" \
+    --hidden-grid "$HIDDEN_GRID" \
+    --lr-grid "$LR_GRID" \
+    --dropout-grid "$DROPOUT_GRID" \
+    --lambda-cont-grid "$LAMBDA_CONT_GRID" \
+    --epochs "$EPOCHS" \
+    --batch "$BATCH" \
+    --which "$WHICH" \
+    --outdir "${DATAD}/grid" \
+    --run-vis | tee log.grid.txt
+fi
+
 
