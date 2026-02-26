@@ -21,6 +21,7 @@ module unload libfabric
 module load libfabric/1.20.1
 module -t list
 conda activate gpu_env
+conda list
 
 source /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/etc/bashrc
 export WM_MPLIB=CRAY-MPICH
@@ -74,20 +75,15 @@ USE_TORCHRUN=${USE_TORCHRUN:-0}
 
 if [ "$USE_TORCHRUN" = "1" ]; then
   NNODES=${SLURM_NNODES:-1}
+  NTASKS=$((NNODES*8))
   NPROC_PER_NODE=${SLURM_GPUS_PER_NODE:-1}
   export MASTER_ADDR=$(hostname -i)
   export NCCL_SOCKET_IFNAME=hsn0
   export MASTER_PORT=3442
 
-  time srun --nodes="${NNODES}" --ntasks="${NNODES}" --ntasks-per-node=8 \
-    torchrun \
-      --nnodes="${NNODES}" \
-      --nproc_per_node="${NPROC_PER_NODE}" \
-      --node_rank="${SLURM_NODEID}" \
-      --rdzv_id="${SLURM_JOB_ID}" \
-      --rdzv_backend=c10d \
-      --rdzv_endpoint="${MASTER_ADDR}:${MASTER_PORT}" \
-      train_grid.py \
+  time srun -N "${NNODES}" -n "${NTASKS}" --ntasks-per-node=8 \
+	--gpus-per-task=1 --gpu-bind=closest \
+    python -u train_grid.py \
       --ddp-backend "${DDP_BACKEND}" \
       --cell-npz "$CELL_NPZ" \
       --hidden-grid "$HIDDEN_GRID" \
@@ -98,7 +94,7 @@ if [ "$USE_TORCHRUN" = "1" ]; then
       --batch "$BATCH" \
       --which "$WHICH" \
       --outdir "${DATAD}/grid" \
-      --run-vis | tee log.grid.txt
+      --run-vis |& tee log.grid.txt
 else
   time python -u train_grid.py \
     --cell-npz "$CELL_NPZ" \
