@@ -188,12 +188,17 @@ def main() -> None:
     p.add_argument("--out", default="cfd_xy.npz", help="output .npz")
     p.add_argument("--x-fields", nargs="+", default=["rAUf_ml", "phiHbyA_ml","divPhiHbyA_f_ml"], help="X field names")
     p.add_argument("--y-field", default="pEqnFlux_ml", help="Y field name")
-    p.add_argument("--ranks", nargs="+", type=int, default=[0], help="mpi ranks to include")
+    p.add_argument("--nproc", type=int, default=None, help="number of MPI ranks (auto-generate 0..nproc-1)")
     p.add_argument("--stride", type=int, default=1, help="time stride")
     p.add_argument("--start", type=int, default=None, help="override StartTimeIndex")
     p.add_argument("--end", type=int, default=None, help="override EndTimeIndex")
     p.add_argument("--as-samples", action="store_true", help="flatten (T,N,*) -> (T*N,*)")
     args = p.parse_args()
+
+    if args.nproc is not None:
+        ranks = list(range(args.nproc))
+    else:
+        ranks = args.ranks
 
     X_time, Y_time, info = fetch_xy_over_time(
         x_fields=args.x_fields,

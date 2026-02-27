@@ -3,14 +3,17 @@
 # =========================
 # Switches
 # =========================
-EXE1 = 0        # 1: Exe exp_openfoam.py
-EXE2 = 0        # 1: Exe make dataset & maps
-MKMAP = 0       # 1: EXE make maps
-SAMPLE_MODE = 1 # 1: Cell-wise / ##Invalid##2: Face-wise
-EXE3 = 1        # 1: Exe sampling
-EXE4 = 1        # 1: Exe train.py
-EXE5 = 1        # 1: Exe inference
+EXE1 = 1        # 1: Exe exp_openfoam.py
+EXE2 = 1        # 1: Exe make dataset & maps
+MKMAP = 1       # 1: EXE make maps
+EXE3 = 0        # 1: Exe subsampling
+EXE4 = 0        # 1: Exe train.py
+EXE5 = 0        # 1: Exe inference
 
+# NAMES
+DATA1 = "TGV_0-2"  #make dataset
+DATA2 = "TGV_0-2"  #subsampling target data
+DATA3 = "subsampled_ofCell_random_random"   #Train data
 
 from smartsim import Experiment
 from smartredis import Client
@@ -20,7 +23,7 @@ PORT = int(os.environ["PORT"])
 HOMED = os.environ["HOMED"]
 DATAD = os.environ["DATAD"]
 IFACE = os.environ["IFACE"]
-NODES = os.environ["NODES"]
+NODES = int(os.environ.get("NODES", "1"))
 WORKD = os.environ["WORKD"]
 CASED = os.environ["CASED"]
 FOAM_RUN = os.environ["FOAM_RUN"]
@@ -33,135 +36,99 @@ SICKLE_ROOT = os.environ["SICKLE_ROOT"]
 #)
 exp = Experiment("ofrml", launcher="slurm", exp_path=WORKD)
 db = exp.create_database(
-    db_nodes=f"NODES",
-    interface=["hsn0","hsn1","hsn2","hsn3"]
+    db_nodes=NODES,
+    interface=["hsn0","hsn1","hsn2","hsn3"],
+    single_cmd=True
 )
+address = db.get_address()[0]
+os.environ["SSDB"] = address
+os.environ["SSDB_CLUSTER"] = "1" if (NODES > 1) else "0"
+print("DB address:", address)
+
+env = os.environ.copy()
 
 try:
-    # --- start orchestrator ---
+    #SmartSIM
+    exp.generate(db, overwrite=True)
     exp.start(db)
-    print(f"[INFO] Orchestrator started at localhost:{PORT}")
-
-    # check orchestrator
-    client = Client(address=f"localhost:{PORT}", cluster=False)
+    address = db.get_address()[0]
+    client = Client(address=address, cluster=(NODES > 1))
+    print("DB address:", address)
 
     # --- Main ---
-    
     import subprocess
 
     #1 calc & put flow field
     if EXE1:
-        subprocess.run(["python", "exp_openfoam.py"], check=True)
+        subprocess.run(["python", "exp_openfoam.py"], check=True, env=env)
     
 
     #2 Make dataset
     if EXE2:
         subprocess.run([
-            "python", "make_cfd_dataset.py",
-            "--out", f"{DATAD}/of-raw/cfd_xy.npz"
-        ], check=True)
+            "python", f"{WORKD}/utils/make_cfd_dataset.py",
+            "--nproc", "112",
+            "--out", f"{DATAD}/of-raw/{DATA1}.npz"
+        ], check=True, env=env)
 
         if MKMAP:
             # ---- make maps ----
             # ---- make face maps ----
             subprocess.run([
-                "python", "make_face_maps_from_C.py",
+                "python", f"{WORKD}/utils/make_face_maps_from_C.py",
                 "--case", f"{FOAM_RUN}",
-                "--npz", f"{DATAD}/of-raw/cfd_xy.npz",
+                "--npz", f"{DATAD}/of-raw/{DATA1}.npz",
                 "--out", f"{DATAD}/maps/face_maps_rank0_internal.npz",
             ], check=True)
     
     
-            if SAMPLE_MODE == 1:
-                # ---- make cell map ----
-                subprocess.run([
-                    "python", "make_cell_maps.py",
-                    "--case", f"{FOAM_RUN}",
-                    "--face-maps", f"{DATAD}/maps/face_maps_rank0_internal.npz",
-                    "--time", "0",
-                    "--out", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
-                ], check=True)
+            # ---- make cell map ----
+            subprocess.run([
+                "python", f"{WORKD}/utils/make_cell_maps.py",
+                "--case", f"{FOAM_RUN}",
+                "--face-maps", f"{DATAD}/maps/face_maps_rank0_internal.npz",
+                "--time", "0",
+                "--out", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
 
-    
+
     #3 Sampling
     if EXE3:
-        if SAMPLE_MODE == 1:
-            # ============================================================
-            # Cell-wise subsampling (for continuity-aware training)
-            # - Directly calls SICKLE subsample.py (no directional split)
-            # - Samples cells and stores local face connectivity
-            # - Output NPZ contains:
-            #     X, Y                      : (T*num_hypercubes, Ns, C)
-            #     face_ids_list             : per-block unique face IDs
-            #     cell_faces_local_idx      : local face indices (Ns,6)
-            #     cell_face_sign, V         : for divergence loss
-            # ============================================================
-            subprocess.run([
-                "python", "-u", f"{SICKLE_ROOT}/subsample.py",
-                # Data type: OpenFOAM cell-wise dataset with connectivity
-                "--dtype", "of-cell-npz",
-                # Face-wise CFD features/labels (rAUf, phiHbyA, divPhiHbyA, pEqnFlux)
-                "--xy_npz", f"{DATAD}/of_raw/cfd_xy_2.0-2.4.npz",
-                # Cell-to-face connectivity, signs, and cell volumes
-                "--cell_npz", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
-                # Index of clustering variable in X (e.g., div(phiHbyA))
-                "--cv_index", "2",
-                # Hypercube selection strategy (random blocks in space)
-                "--hypercubes", "random",
-                # Subsampling method inside each hypercube
-                "--method", "random",
-                # Number of hypercubes per timestep
-                "--num_hypercubes", "16",
-                # Number of sampled cells per hypercube
-                "--num_samples", "1000",
-                # Temporal window size (1 = independent snapshots)
-                "--window", "1",
-                # Output directory for subsampled NPZ
-                "--output_dir", f"{DATAD}/sampled",
-                # File name template (expanded inside SICKLE)
-                "--fileprefix", "ofCell_{hypercubes}_{method}",
-            ], check=True, cwd=SICKLE_ROOT)
+        # ============================================================
+        # Cell-wise subsampling (for continuity-aware training)
+        # - Directly calls SICKLE subsample.py (no directional split)
+        # - Samples cells and stores local face connectivity
+        # - Output NPZ contains:
+        #     X, Y                      : (T*num_hypercubes, Ns, C)
+        #     face_ids_list             : per-block unique face IDs
+        #     cell_faces_local_idx      : local face indices (Ns,6)
+        #     cell_face_sign, V         : for divergence loss
+        # ============================================================
+        subprocess.run([
+            "python", "-u", f"{SICKLE_ROOT}/subsample.py",
+            # Data type: OpenFOAM cell-wise dataset with connectivity
+            "--dtype", "of-cell-npz",
+            # Face-wise CFD features/labels (rAUf, phiHbyA, divPhiHbyA, pEqnFlux)
+            "--xy_npz", f"{DATAD}/of_raw/{DATA2}.npz",
+            # Cell-to-face connectivity, signs, and cell volumes
+            "--cell_npz", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
+            # Index of clustering variable in X (e.g., div(phiHbyA))
+            "--cv_index", "2",
+            # Hypercube selection strategy (random blocks in space)
+            "--hypercubes", "random",
+            # Subsampling method inside each hypercube
+            "--method", "random",
+            # Number of hypercubes per timestep
+            "--num_hypercubes", "16",
+            # Number of sampled cells per hypercube
+            "--num_samples", "1000",
+            # Temporal window size (1 = independent snapshots)
+            "--window", "1",
+            # Output directory for subsampled NPZ
+            "--output_dir", f"{DATAD}/sampled",
+            # File name template (expanded inside SICKLE)
+            "--fileprefix", f"{DATA2}-cell_{hypercubes}_{method}",
     
-    
-        #elif SAMPLE_MODE == 2:
-        #    # ============================================================
-        #    # Face-wise subsampling (directional, legacy pipeline)
-        #    # - Uses run_sickle_subsample.py wrapper
-        #    # - Executed separately for x / y / z face directions
-        #    # - Output NPZ contains independent face samples only
-        #    #   (no cell connectivity information)
-        #    # ============================================================
-        #    subprocess.run([
-        #        "python", "run_sickle_subsample.py",
-        #        # Root directory of SICKLE repository
-        #        "--sickle_root", f"{SICKLE_ROOT}",
-        #        # Data type: OpenFOAM face-wise dataset
-        #        "--dtype", "of-face-npz",
-        #        # Face-wise CFD features/labels
-        #        "--xy_npz", f"{DATAD}/of-raw/cfd_xy_2.4-2.8.npz",
-        #        # Face center maps for structured indexing
-        #        "--maps_npz", f"{DATAD}/maps/face_maps_rank0_internal.npz",
-        #        # Index of clustering variable in X
-        #        "--cv_index", "2",
-        #        # Hypercube selection strategy
-        #        "--hypercubes", "random",
-        #        # Subsampling method inside hypercube
-        #        "--method", "random",
-        #        # Number of hypercubes per timestep
-        #        "--num_hypercubes", "32",
-        #        # Number of sampled faces per hypercube
-        #        "--num_samples", "1000",
-        #        # Structured grid size for each sampled cube
-        #        "--nxsl", "16", "--nysl", "16", "--nzsl", "16",
-        #        # Temporal window size
-        #        "--window", "1",
-        #        # Output directory for subsampled NPZ
-        #        "--output_dir", f"{DATAD}/sampled",
-        #        # File name template (direction expanded by wrapper)
-        #        "--fileprefix", "ofFace_{direction}_{hypercubes}_{method}",
-        #    ], check=True)
-
-
+  
     #4 Train
     if EXE4:
         # ==========================================================
@@ -172,83 +139,48 @@ try:
         #   - A shared MLP is applied independently to each face
         #   - Optional physics-informed continuity loss is enabled
         # ==========================================================
-        if SAMPLE_MODE == 1:
-            subprocess.run([
-                "python", "-u", "train.py", "mlp",
-                "--src", "sickle",
+        subprocess.run([
+            "python", "-u", "train.py", "mlp",
+            "--src", "sickle",
     
-                # Input dataset:
-                # Cell-based NPZ where each sample packs 6 faces per cell
-                "--cell_npz", f"{DATAD}/sampled/subsampled_ofCell_random_random.npz",
+            # Input dataset:
+            # Cell-based NPZ where each sample packs 6 faces per cell
+            "--cell_npz", f"{DATAD}/sampled/{DATA3}.npz",
     
-                # Training control
-                "--epochs", "3",            # Number of training epochs
-                "--lr", "1e-3",              # Learning rate for Adam optimizer
-                "--batch", "8192",           # Batch size in terms of number of cells
+            # Training control
+            "--epochs", "3",            # Number of training epochs
+            "--lr", "1e-3",              # Learning rate for Adam optimizer
+            "--batch", "8192",           # Batch size in terms of number of cells
     
-                # Physics-informed continuity loss (∇·φ ≈ 0)
-                "--lambda-cont", "1.0",      # Weight of continuity (divergence) loss; 0 disables physics term
+            # Physics-informed continuity loss (∇·φ ≈ 0)
+            "--lambda-cont", "1.0",      # Weight of continuity (divergence) loss; 0 disables physics term
     
-                # Feature layout inside one face
-                "--phi-in-face", "1",        # Index of phiHbyA within per-face feature vector
-                "--fields-per-face", "3",    # Number of input features per face (e.g., rAUf, phiHbyA, divPhiHbyA)
+            # Feature layout inside one face
+            "--phi-in-face", "1",        # Index of phiHbyA within per-face feature vector
+            "--fields-per-face", "3",    # Number of input features per face (e.g., rAUf, phiHbyA, divPhiHbyA)
     
-                # MLP architecture
-                "--hidden", "32", "32",       # Hidden layer sizes (shared across all faces)
-                "--act", "tanh",              # Activation function
-                # Output
-                "--save-jit", f"{DATAD}/jit/mlp_cell_h32-32.jit",  # Saved TorchScript model
+            # MLP architecture
+            "--hidden", "32", "32",       # Hidden layer sizes (shared across all faces)
+            "--act", "tanh",              # Activation function
+            # Output
+            "--save-jit", f"{DATAD}/jit/mlp_cell_h32-32.jit",  # Saved TorchScript model
  
-                "--dropout", "0.05",
-                
-                "--split", "0.8,0.1,0.1",
-                "--seed", "1234",
-                "--split-save", f"{DATAD}/splits/split_cell_seed1234.npz",
-                
-                "--fit-norm",
-                "--norm-path", f"{DATAD}/stats/norm_cell_h32-32.npz",
-                #"--split-load", f"{DATAD}/splits/split_cell_seed1234.npz",
-                #"--load-norm",
-                #"--norm-path", f"{DATAD}/stats/norm_cell_h64-64.npz",
-
-            ], check=True)
-    
-        # ==========================================================
-        # SAMPLE_MODE = 2
-        # Face-wise training:
-        #   - Each face is treated as an independent sample
-        #   - No explicit cell-level physics constraints
-        #   - Equivalent to standard face-wise regression
-        # ==========================================================
-        #elif SAMPLE_MODE == 2:
-        #    subprocess.run([
-        #        "python", "train.py", "mlp",
-        #        "--src", "sickle",
-    
-        #        # Input datasets:
-        #        # Face-based NPZ files sampled along x, y, and z orientations
-        #        "--sickle_x", f"{DATAD}/sampled/subsampled_ofFace_x_random_random.npz",
-        #        "--sickle_y", f"{DATAD}/sampled/subsampled_ofFace_y_random_random.npz",
-        #        "--sickle_z", f"{DATAD}/sampled/subsampled_ofFace_z_random_random.npz",
-    
-        #        # Training control
-        #        "--batch", "16384",           # Batch size in terms of number of faces
-        #        "--epochs", "3",              # Number of training epochs
-        #        "--lr", "1e-3",               # Learning rate for Adam optimizer
-    
-        #        # MLP architecture
-        #        "--hidden", "16", "16",        # Hidden layer sizes
-        #        "--act", "tanh",               # Activation function
-    
-        #        # Output
-        #        "--save-jit", f"{DATAD}/jit/mlp_face_h16-16.jit",  # Saved TorchScript model
-        #    ], check=True)
+            "--dropout", "0.05",
+            
+            "--split", "0.8,0.1,0.1",
+            "--seed", "1234",
+            "--split-save", f"{DATAD}/splits/split_cell_seed1234.npz",
+            
+            "--fit-norm",
+            "--norm-path", f"{DATAD}/stats/norm_cell_h32-32.npz",
+            #"--split-load", f"{DATAD}/splits/split_cell_seed1234.npz",
+            #"--load-norm",
+            #"--norm-path", f"{DATAD}/stats/norm_cell_h64-64.npz",
 
 
     #5 get model , flow field and Inference
     if EXE5:
 
-        #
         #5 cell-wise evaluation (Train/Val/Test split based)
         jit = f"{DATAD}/jit/mlp_cell_h32-32.jit"
     

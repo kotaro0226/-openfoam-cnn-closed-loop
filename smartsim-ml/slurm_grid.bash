@@ -12,41 +12,11 @@
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 
 # Setup
-export NODES=1
-module load PrgEnv-gnu
-module load cray-mpich/8.1.31
-module load rocm/6.3.1
-module load miniforge3/23.11.0-0
-module unload libfabric
-module load libfabric/1.20.1
-module -t list
-conda activate gpu_env
-conda list
-
-source /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/etc/bashrc
-export WM_MPLIB=CRAY-MPICH
-export WM_CC=cc
-export WM_CXX=CC
-
-#export SR_LOG_LEVEL=DEBUG
-#export SR_LOG_FILE=$WORKD/smartredis_client.log
-
-# Optimizations for inference
-export MIOPEN_USER_DB_PATH="/tmp/${USER}/my-miopen-cache"
-export MIOPEN_CUSTOM_CACHE_DIR=${MIOPEN_USER_DB_PATH}
-rm -rf ${MIOPEN_USER_DB_PATH}
-mkdir -p ${MIOPEN_USER_DB_PATH}
-
-# Existing project paths (same as slurm.sh)
 export HOMED="/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3"
-export DATAD="${HOMED}/data"
-export WORKD="${HOMED}/smartsim-ml"
-export SICKLE_ROOT="${HOMED}/sickle-of"
-export CASED="TGStratifiedLES_ML"
-export FOAM_RUN="${HOMED}/${CASED}"
-export WM_PROJECT_USER_DIR="$FOAM_RUN"
-export PORT=7000
-export IFACE="lo"
+source ${HOMED}/env_setup.sh
+cd $WORKD
+
+#------------------------
 
 # Optional: tweak grid by env without editing script
 HIDDEN_GRID=${HIDDEN_GRID:-"16;32,32;32,32,32"}
@@ -60,8 +30,6 @@ DDP_BACKEND=${DDP_BACKEND:-"nccl"}
 
 # Reuse existing subsampling output path from Main_pype.py
 CELL_NPZ=${CELL_NPZ:-"${DATAD}/sampled/subsampled_ofCell_random_random.npz"}
-
-cd "$WORKD"
 
 mkdir -p "${DATAD}/grid"
 

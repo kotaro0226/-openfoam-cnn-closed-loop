@@ -8,7 +8,7 @@ import numpy as np
 import jinja2 as jj
 
 from of_common import connect, get_field_name
-client, exp, of_case_name, fn_name = connect()
+client, of_case_name, fn_name = connect()
 
 polyMesh_dir = os.path.join(of_case_name, "constant", "polyMesh")
 
