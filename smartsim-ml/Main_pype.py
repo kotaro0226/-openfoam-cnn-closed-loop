@@ -4,7 +4,7 @@
 # Switches
 # =========================
 EXE1 = 1        # 1: Exe exp_openfoam.py
-EXE2 = 1        # 1: Exe make dataset & maps
+EXE2 = 0        # 1: Exe make dataset & maps
 MKMAP = 1       # 1: EXE make maps
 EXE3 = 0        # 1: Exe subsampling
 EXE4 = 0        # 1: Exe train.py
@@ -19,10 +19,10 @@ from smartsim import Experiment
 from smartredis import Client
 import os
 import subprocess
-PORT = int(os.environ["PORT"])
+#PORT = int(os.environ["PORT"])
+#IFACE = os.environ["IFACE"]
 HOMED = os.environ["HOMED"]
 DATAD = os.environ["DATAD"]
-IFACE = os.environ["IFACE"]
 NODES = int(os.environ.get("NODES", "1"))
 WORKD = os.environ["WORKD"]
 CASED = os.environ["CASED"]
@@ -36,13 +36,14 @@ SICKLE_ROOT = os.environ["SICKLE_ROOT"]
 #)
 exp = Experiment("ofrml", launcher="slurm", exp_path=WORKD)
 db = exp.create_database(
-    db_nodes=NODES,
+    db_nodes=1,
+#    db_nodes=NODES,
     interface=["hsn0","hsn1","hsn2","hsn3"],
-    single_cmd=True
+    single_cmd=True,
 )
 address = db.get_address()[0]
 os.environ["SSDB"] = address
-os.environ["SSDB_CLUSTER"] = "1" if (NODES > 1) else "0"
+#os.environ["SSDB_CLUSTER"] = "1" if (NODES > 1) else "0"
 print("DB address:", address)
 
 env = os.environ.copy()
@@ -52,7 +53,8 @@ try:
     exp.generate(db, overwrite=True)
     exp.start(db)
     address = db.get_address()[0]
-    client = Client(address=address, cluster=(NODES > 1))
+    #client = Client(address=address, cluster=(NODES > 1))
+    client = Client(address=address, cluster=False)
     print("DB address:", address)
 
     # --- Main ---
@@ -89,6 +91,7 @@ try:
                 "--face-maps", f"{DATAD}/maps/face_maps_rank0_internal.npz",
                 "--time", "0",
                 "--out", f"{DATAD}/maps/cell_maps_rank0_internal.npz",
+            ], check=True)
 
 
     #3 Sampling
@@ -127,6 +130,8 @@ try:
             "--output_dir", f"{DATAD}/sampled",
             # File name template (expanded inside SICKLE)
             "--fileprefix", f"{DATA2}-cell_{hypercubes}_{method}",
+
+        ], check=True)
     
   
     #4 Train
@@ -176,6 +181,8 @@ try:
             #"--split-load", f"{DATAD}/splits/split_cell_seed1234.npz",
             #"--load-norm",
             #"--norm-path", f"{DATAD}/stats/norm_cell_h64-64.npz",
+
+        ], check=True)
 
 
     #5 get model , flow field and Inference

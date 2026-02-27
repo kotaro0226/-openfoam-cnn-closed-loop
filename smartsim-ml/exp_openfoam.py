@@ -47,17 +47,36 @@ subprocess.run(["python", "initialize_T2.py"], check=True, cwd=of_case_name)
 #subprocess.run(["python", "initialize_U.py"], check=True, cwd=of_case_name)
 subprocess.run(["python", "initialize_U2.py"], check=True, cwd=of_case_name)
 
+sys.exit()
+
+    decomp_settings = exp.create_run_settings(
+        exe="runApplication",
+        exe_args=f"decomposePar -force -case {of_case_name}",
+        run_command=None,
+        )
+    decomp_model = exp.create_model(name="decomposePar", run_settings=decomp_settings)
+    exp.start(decomp_model, block=True)
+
+
 else:
     print("[INFO] Existing mesh detected -> skip blockMesh / renumberMesh")
 
-
 # buoyantBoussinesqPimpleFoam_ML settings & model
-solve_settings = exp.create_run_settings(exe="buoyantBoussinesqPimpleFoam_ML", exe_args=f"-case {of_case_name}")
+#solve_settings = exp.create_run_settings(exe="buoyantBoussinesqPimpleFoam_ML", exe_args=f"-case {of_case_name}")
+solve_settings = exp.create_run_settings(
+    exe="buoyantBoussinesqPimpleFoam_ML",
+    exe_args=f"-case {of_case_name} -parallel",
+    run_command="srun",
+)
+
+solve_settings.set_tasks(112)
+solve_settings.set_tasks_per_node(56)
+solve_settings.set_cpus_per_task(1)
+
 solve_model = exp.create_model(name="solve", run_settings=solve_settings)
+
+
 # Run simpleFoam solver
 exp.start(solve_model, summary=True, block=True) 
 
-# Get the names of OpenFOAM fiels from controlDict.functionObject 
-#control_dict = ParsedParameterFile(os.path.join(of_case_name, "system/controlDict"))
-#field_names = list(control_dict["functions"][fn_name]["fields"])
 

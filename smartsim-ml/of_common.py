@@ -13,7 +13,8 @@ def connect():
     addr = os.environ["SSDB"]                 # "host:port"
     cluster = (os.environ.get("SSDB_CLUSTER","0") == "1")
 
-    client = Client(address=addr, cluster=cluster)
+    #client = Client(address=addr, cluster=cluster)
+    client = Client(address=addr, cluster=False)
     return client, of_case_name, fn_name
 
 def get_field_name(client, fn_name, field_name, processor=0, timestep=None):
