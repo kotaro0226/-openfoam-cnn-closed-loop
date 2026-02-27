@@ -7,9 +7,17 @@ FoamFile
     object      decomposeParDict;
 }
 
-numberOfSubdomains 64;
+numberOfSubdomains 112;
 
 method          scotch;
+
+//method          simple;
+
+//coeffs
+//{
+//    n           (5 5 5);
+//}
+
 
 distributed     no;
 
