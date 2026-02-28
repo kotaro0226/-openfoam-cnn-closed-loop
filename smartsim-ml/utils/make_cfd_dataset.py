@@ -24,7 +24,17 @@ Notes:
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
+
 import numpy as np
+
+_this_dir = Path(__file__).resolve().parent
+_parent_dir = _this_dir.parent
+for _d in (_this_dir, _parent_dir):
+    _s = str(_d)
+    if _s not in sys.path:
+        sys.path.insert(0, _s)
 
 from of_common import connect, get_field_name
 

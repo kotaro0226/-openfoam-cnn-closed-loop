@@ -34,18 +34,29 @@ else:
     print("[INFO] Existing mesh detected -> skip blockMesh / renumberMesh")
 
 # --- solver (parallel) ---
+subprocess.run([
+    "srun",
+    "--overlap",
+    "--nodes", "2",
+    "--ntasks", "112",
+    "--ntasks-per-node", "56",
+    "buoyantBoussinesqPimpleFoam_ML",
+    "-case", f"{of_case_name}",
+    "-parallel",
+], check=True)
 
-solve_settings = exp.create_run_settings(
-    exe="buoyantBoussinesqPimpleFoam_ML",
-    exe_args=f"-case {of_case_name} -parallel"
-)
-
-solve_settings.set_nodes(2)
-solve_settings.set_tasks(112)
-solve_settings.set_tasks_per_node(56)
-
-solve_model = exp.create_model("solve", solve_settings)
-exp.start(solve_model, summary=True, block=True)
+#solve_settings = exp.create_run_settings(
+#    exe="buoyantBoussinesqPimpleFoam_ML",
+#    exe_args=f"-case {of_case_name} -parallel"
+#)
+#
+#solve_settings.set_nodes(2)
+#solve_settings.set_tasks(112)
+#solve_settings.set_tasks_per_node(56)
+#
+#solve_model = exp.create_model("solve", solve_settings)
+#exp.generate(solve_model, overwrite=True)
+#exp.start(solve_model, summary=True, block=True)
 
 
 #subprocess.run([
