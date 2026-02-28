@@ -228,8 +228,11 @@ def main() -> None:
     else:
         X, Y = X_time, Y_time
 
-    np.savez_compressed(args.out, X=X, Y=Y, **info)
-    print(f"[INFO] wrote {args.out}")
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    np.savez_compressed(out_path, X=X, Y=Y, **info)
+    print(f"[INFO] wrote {out_path}")
     print(f"[INFO] X.shape={X.shape} Y.shape={Y.shape} (saved)")
 
 
