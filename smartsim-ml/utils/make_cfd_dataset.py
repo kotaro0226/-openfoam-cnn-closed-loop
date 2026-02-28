@@ -208,12 +208,12 @@ def main() -> None:
     if args.nproc is not None:
         ranks = list(range(args.nproc))
     else:
-        ranks = args.ranks
+        ranks = args.nproc
 
     X_time, Y_time, info = fetch_xy_over_time(
         x_fields=args.x_fields,
         y_field=args.y_field,
-        ranks=args.ranks,
+        ranks=ranks,
         stride=args.stride,
         start=args.start,
         end=args.end,
