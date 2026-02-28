@@ -1,0 +1,22 @@
+17:44:29 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [321161:MainThread] ERROR An error occurred when launching blockMesh 
+Check error and output files for details.
+Name: blockMesh
+Type: Model
+Executable: /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/platforms/linux64GccDPInt32Opt/bin/blockMesh
+Executable Arguments: -case TGStratifiedLES_ML
+Run Command: /usr/bin/srun
+
+17:44:29 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [321161:MainThread] ERROR Job step blockMesh failed to launch
+22:59:21 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [663950:MainThread] ERROR An error occurred when launching solve 
+Check error and output files for details.
+Name: solve
+Type: Model
+Executable: /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/platforms/linux64GccDPInt32Opt/bin/buoyantBoussinesqPimpleFoam_ML
+Executable Arguments: -case /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/TGStratifiedLES_ML -parallel
+Run Command: /usr/bin/srun
+Run Arguments:
+	nodes = 2
+	ntasks = 112
+	ntasks-per-node = 56
+
+22:59:21 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [663950:MainThread] ERROR Job step solve failed to launch

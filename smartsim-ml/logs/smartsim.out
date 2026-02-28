@@ -1,0 +1,293 @@
+17:36:20 frontier09451 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1052716:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+17:39:50 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [319283:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+17:42:01 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [320192:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+17:43:51 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [321054:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+17:44:06 frontier06898 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [321161:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Models: 1
+Database Status: inactive
+
+=== Models ===
+blockMesh
+Executable: /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/platforms/linux64GccDPInt32Opt/bin/blockMesh
+Executable Arguments: -case TGStratifiedLES_ML
+Run Command: /usr/bin/srun
+
+
+
+17:58:43 frontier06472 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1123086:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:08:01 frontier06582 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [553783:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:11:08 frontier00318 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [835590:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:15:18 frontier00002 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2305175:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:18:05 frontier08462 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2088840:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:27:08 frontier08127 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1017201:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:28:29 frontier08519 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2005067:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:36:07 frontier07133 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [940890:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:39:32 frontier06851 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [250075:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+18:52:59 frontier10493 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [3316678:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+22:37:00 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [659235:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+22:56:36 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [661591:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+22:58:44 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [663844:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+22:58:59 frontier10413 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [663950:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Models: 1
+Database Status: inactive
+
+=== Models ===
+solve
+Executable: /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/platforms/linux64GccDPInt32Opt/bin/buoyantBoussinesqPimpleFoam_ML
+Executable Arguments: -case /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/TGStratifiedLES_ML -parallel
+Run Command: /usr/bin/srun
+Run Arguments:
+	nodes = 2
+	ntasks = 112
+	ntasks-per-node = 56
+
+
+

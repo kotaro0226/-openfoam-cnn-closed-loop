@@ -4,7 +4,7 @@
 # Switches
 # =========================
 EXE1 = 1        # 1: Exe exp_openfoam.py
-EXE2 = 0        # 1: Exe make dataset & maps
+EXE2 = 1        # 1: Exe make dataset & maps
 MKMAP = 1       # 1: EXE make maps
 EXE3 = 0        # 1: Exe subsampling
 EXE4 = 0        # 1: Exe train.py
@@ -41,18 +41,15 @@ db = exp.create_database(
     interface=["hsn0","hsn1","hsn2","hsn3"],
     single_cmd=True,
 )
-address = db.get_address()[0]
-os.environ["SSDB"] = address
-#os.environ["SSDB_CLUSTER"] = "1" if (NODES > 1) else "0"
-print("DB address:", address)
 
-env = os.environ.copy()
 
 try:
     #SmartSIM
     exp.generate(db, overwrite=True)
-    exp.start(db)
+    exp.start(db, summary=True, block=True)
     address = db.get_address()[0]
+    env = os.environ.copy()
+    env["SSDB"] = address
     #client = Client(address=address, cluster=(NODES > 1))
     client = Client(address=address, cluster=False)
     print("DB address:", address)
