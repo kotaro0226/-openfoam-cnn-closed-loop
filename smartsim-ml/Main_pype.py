@@ -5,7 +5,7 @@
 # =========================
 EXE1 = 1        # 1: Exe exp_openfoam.py
 EXE2 = 1        # 1: Exe make dataset & maps
-MKMAP = 1       # 1: EXE make maps
+MKMAP = 0       # 1: EXE make maps
 EXE3 = 0        # 1: Exe subsampling
 EXE4 = 0        # 1: Exe train.py
 EXE5 = 0        # 1: Exe inference
@@ -66,20 +66,29 @@ try:
     if EXE2:
         subprocess.run([
             "python", f"{WORKD}/utils/make_cfd_dataset.py",
+            "--outdir", f"{DATAD}/of-raw-ranks",
             "--nproc", "112",
-            "--out", f"{DATAD}/of-raw/{DATA1}.npz"
+            "--stride", "1"
         ], check=True, env=env)
 
         if MKMAP:
             # ---- make maps ----
+            subprocess.run([
+                "python", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
+                "--case", f"{FOAM_RUN}",
+                "--rank-dir", f"{DATAD}/of-raw-ranks",
+                "--nproc", "112",
+                "--out", f"{DATAD}/of-raw/{DATA1}.npz",
+            ], check=True, env=env)
+
             # ---- make face maps ----
             subprocess.run([
                 "python", f"{WORKD}/utils/make_face_maps_from_C.py",
                 "--case", f"{FOAM_RUN}",
                 "--npz", f"{DATAD}/of-raw/{DATA1}.npz",
+                "--C", f"{FOAM_RUN}/0/C",
                 "--out", f"{DATAD}/maps/face_maps_rank0_internal.npz",
             ], check=True)
-    
     
             # ---- make cell map ----
             subprocess.run([
@@ -127,7 +136,6 @@ try:
             "--output_dir", f"{DATAD}/sampled",
             # File name template (expanded inside SICKLE)
             "--fileprefix", f"{DATA2}-cell_{hypercubes}_{method}",
-
         ], check=True)
     
   

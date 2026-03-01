@@ -1,24 +1,18 @@
-"""Build supervised learning arrays (X, Y) from OpenFOAM -> Redis tensors.
+#!/usr/bin/env python3
+"""
+Fetch face-wise tensors from Redis (via SmartRedis) and write per-rank NPZ files.
 
-This project stores OpenFOAM fields/tensors into Redis via a functionObject.
-The naming is described by the dataset metadata dataset template and field template.
+WHY per-rank?
+- In parallel OpenFOAM, Redis tensors are in *processor-local face ordering*.
+- Downstream subsampling expects *global internal face ordering* (top case neighbour).
+- We therefore:
+  (1) Save per-rank face-wise time series without modifying length/order.
+  (2) Assemble into global internal ordering using faceProcAddressing (separate script).
 
-Goal :
-  X = [rAUf_ml, phiHbyA_ml divPhiHbyA_f_ml]
-  Y = [pEqnFlux_ml]  # == p_rghEqn.flux()
-
-This script fetches those tensors over multiple time indices and outputs an .npz file.
-
-Typical usage:
-  python make_cfd_dataset.py --out cfd_xy.npz
-  python make_cfd_dataset.py --out cfd_xy.npz --stride 5 --as-samples
-
-Notes:
-  - By default we assume mpi_rank=0 only. If you ran OpenFOAM in parallel and you
-    want to include all ranks, pass --ranks 0 1 2 ...
-  - If you include multiple ranks, arrays are concatenated in rank order.
-    This is *not* the same as reconstructing a global field ordering; it's fine
-    for ML training if you don't require exact geometric adjacency.
+IMPORTANT invariants for downstream mapping:
+- Never drop rows (faces). No masking that changes N.
+- Never trim to minN. If a timestep is inconsistent, skip the whole timestep.
+- Keep rank ordering exactly as in OpenFOAM processor mesh.
 """
 
 from __future__ import annotations
@@ -26,6 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Iterable
 
 import numpy as np
 
@@ -40,13 +35,13 @@ from of_common import connect, get_field_name
 
 
 def _ensure_2d(a: np.ndarray) -> np.ndarray:
-    """Make sure tensors are (N, C)."""
+    """Ensure tensors are (N, C)."""
     a = np.asarray(a)
     if a.ndim == 1:
         return a.reshape(-1, 1)
     if a.ndim == 2:
         return a
-    # For safety: flatten everything but last dim
+    # Flatten everything but first dim
     return a.reshape(a.shape[0], -1)
 
 
@@ -58,182 +53,165 @@ def _get_int_meta(meta, key: str, default: int | None = None) -> int | None:
 
 
 def _time_range_from_metadata(meta) -> tuple[int, int]:
-    """Return (start, end) time indices inclusive.
-
-    openfoam-smartsim metadata usually contains StartTimeIndex/EndTimeIndex.
-    If StartTimeIndex is missing we assume 0.
-    """
+    """Return (start, end) inclusive time indices from Redis metadata."""
     start = _get_int_meta(meta, "StartTimeIndex", 0)
     end = _get_int_meta(meta, "EndTimeIndex", None)
     if end is None:
-        # Fallback keys seen in some examples
         end = _get_int_meta(meta, "EndIndex", None)
     if end is None:
         raise RuntimeError(
             "Could not find EndTimeIndex (or EndIndex) in metadata. "
-            "Inspect fn_name+'_metadata' in Redis to see available keys."
+            "Inspect fn_name+'_metadata' in Redis."
         )
     return start, end
 
 
-def fetch_xy_over_time(
+def _nan_to_num_inplace(a: np.ndarray) -> np.ndarray:
+    """Replace NaN/inf with 0 without changing shape."""
+    # np.nan_to_num returns a new array unless copy=False and dtype allows
+    return np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0, copy=False)
+
+
+def _iter_time_indices(start: int, end: int, stride: int) -> Iterable[int]:
+    return range(start, end + 1, stride)
+
+
+def fetch_rank_over_time(
     *,
+    client,
+    fn_name: str,
     x_fields: list[str],
     y_field: str,
-    ranks: list[int],
-    stride: int,
-    start: int | None,
-    end: int | None,
+    rank: int,
+    time_indices: list[int],
     dtype: np.dtype,
-) -> tuple[np.ndarray, np.ndarray, dict]:
-    """Fetch X/Y tensors over time indices.
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Fetch X/Y for ONE rank over specified time indices.
 
     Returns:
-      X_time: (T, N, Fx) float32
-      Y_time: (T, N, Fy) float32
-      info: dict with metadata and shapes
+      X_time: (T_keep, Nf_local, Fx)
+      Y_time: (T_keep, Nf_local, Fy)
+      kept_times: (T_keep,)
     """
-    client, _exp, _of_case_name, fn_name = connect()
-
-    client.poll_dataset(fn_name + "_metadata", 10, 1000)
-    meta = client.get_dataset(fn_name + "_metadata")
-
-    meta_start, meta_end = _time_range_from_metadata(meta)
-    if start is None:
-        start = meta_start
-    if end is None:
-        end = meta_end
-    if start > end:
-        raise ValueError(f"start({start}) must be <= end({end})")
-
-    time_indices = list(range(start, end + 1, stride))
-
     X_list: list[np.ndarray] = []
     Y_list: list[np.ndarray] = []
-    kept_times: list[int] = []
+    kept: list[int] = []
+
+    expected_N: int | None = None
 
     for t in time_indices:
-        x_rank_chunks: list[np.ndarray] = []
-        y_rank_chunks: list[np.ndarray] = []
+        try:
+            x_parts = []
+            for xf in x_fields:
+                key = get_field_name(client, fn_name, xf, processor=rank, timestep=t)
+                x_parts.append(_ensure_2d(client.get_tensor(key)).astype(dtype, copy=False))
+            x_r = np.concatenate(x_parts, axis=1)  # (N, Fx)
 
-        ok = True
-        for r in ranks:
-            try:
-                x_parts = []
-                for xf in x_fields:
-                    key = get_field_name(client, fn_name, xf, processor=r, timestep=t)
-                    x_parts.append(_ensure_2d(client.get_tensor(key)).astype(dtype, copy=False))
-                x_r = np.concatenate(x_parts, axis=1)  # (N, Fx)
+            y_key = get_field_name(client, fn_name, y_field, processor=rank, timestep=t)
+            y_r = _ensure_2d(client.get_tensor(y_key)).astype(dtype, copy=False)  # (N, Fy)
 
-                y_key = get_field_name(client, fn_name, y_field, processor=r, timestep=t)
-                y_r = _ensure_2d(client.get_tensor(y_key)).astype(dtype, copy=False)  # (N, Fy)
+            if x_r.shape[0] != y_r.shape[0]:
+                raise RuntimeError(f"N mismatch: X={x_r.shape[0]} Y={y_r.shape[0]}")
 
-                if x_r.shape[0] != y_r.shape[0]:
-                    raise RuntimeError(
-                        f"Shape mismatch at t={t}, rank={r}: X has N={x_r.shape[0]} but Y has N={y_r.shape[0]}"
-                    )
+            if expected_N is None:
+                expected_N = x_r.shape[0]
+            elif x_r.shape[0] != expected_N:
+                # DO NOT trim. Skip this timestep.
+                raise RuntimeError(f"N changed: expected {expected_N} but got {x_r.shape[0]}")
 
-                x_rank_chunks.append(x_r)
-                y_rank_chunks.append(y_r)
+            # Replace NaN/inf but keep rows
+            x_r = _nan_to_num_inplace(x_r)
+            y_r = _nan_to_num_inplace(y_r)
 
-            except Exception as e:
-                # Some time indices might not exist depending on when the functionObject fires.
-                # We skip such t.
-                print(f"[WARN] skip t={t} (rank={r}) due to: {e}")
-                ok = False
-                break
+            X_list.append(x_r)
+            Y_list.append(y_r)
+            kept.append(t)
 
-        if not ok:
+        except Exception as e:
+            print(f"[WARN] rank={rank} skip t={t} due to: {e}")
             continue
-
-        X_t = np.concatenate(x_rank_chunks, axis=0) if len(x_rank_chunks) > 1 else x_rank_chunks[0]
-        Y_t = np.concatenate(y_rank_chunks, axis=0) if len(y_rank_chunks) > 1 else y_rank_chunks[0]
-
-        # Basic sanitization
-        if not np.isfinite(X_t).all() or not np.isfinite(Y_t).all():
-            print(f"[WARN] non-finite values at t={t}; filtering those rows")
-            mask = np.isfinite(X_t).all(axis=1) & np.isfinite(Y_t).all(axis=1)
-            X_t = X_t[mask]
-            Y_t = Y_t[mask]
-
-        X_list.append(X_t)
-        Y_list.append(Y_t)
-        kept_times.append(t)
 
     if not X_list:
         raise RuntimeError(
-            "No (X,Y) pairs were fetched. "
-            "Check that your functionObject is writing the requested fields, "
-            "and that fn_name and field names match."
+            f"Rank {rank}: no valid (X,Y) fetched. "
+            "Check that fields exist for this rank/time range."
         )
 
-    # Enforce constant N across time by trimming to min N if needed
-    Ns = [x.shape[0] for x in X_list]
-    minN = min(Ns)
-    if len(set(Ns)) != 1:
-        print(f"[WARN] N differs across time steps: {sorted(set(Ns))}. Trimming to minN={minN}.")
-        X_list = [x[:minN] for x in X_list]
-        Y_list = [y[:minN] for y in Y_list]
-
-    X_time = np.stack(X_list, axis=0)  # (T, N, Fx)
-    Y_time = np.stack(Y_list, axis=0)  # (T, N, Fy)
-
-    info = {
-        "fn_name": fn_name,
-        "x_fields": x_fields,
-        "y_field": y_field,
-        "ranks": ranks,
-        "start": start,
-        "end": end,
-        "stride": stride,
-        "kept_times": np.array(kept_times, dtype=np.int32),
-        "X_shape": np.array(X_time.shape, dtype=np.int32),
-        "Y_shape": np.array(Y_time.shape, dtype=np.int32),
-    }
-    return X_time, Y_time, info
+    X_time = np.stack(X_list, axis=0)
+    Y_time = np.stack(Y_list, axis=0)
+    kept_times = np.asarray(kept, dtype=np.int32)
+    return X_time, Y_time, kept_times
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="cfd_xy.npz", help="output .npz")
-    p.add_argument("--x-fields", nargs="+", default=["rAUf_ml", "phiHbyA_ml","divPhiHbyA_f_ml"], help="X field names")
-    p.add_argument("--y-field", default="pEqnFlux_ml", help="Y field name")
-    p.add_argument("--nproc", type=int, default=None, help="number of MPI ranks (auto-generate 0..nproc-1)")
+    p.add_argument("--outdir", default="data/of-raw-ranks", help="output directory for per-rank npz")
+    p.add_argument(
+        "--x-fields",
+        nargs="+",
+        default=["rAUf_ml", "phiHbyA_ml", "divPhiHbyA_f_ml"],
+        help="X field names (face-wise)",
+    )
+    p.add_argument("--y-field", default="pEqnFlux_ml", help="Y field name (face-wise)")
+    p.add_argument("--nproc", type=int, required=True, help="number of MPI ranks (processors)")
     p.add_argument("--stride", type=int, default=1, help="time stride")
     p.add_argument("--start", type=int, default=None, help="override StartTimeIndex")
     p.add_argument("--end", type=int, default=None, help="override EndTimeIndex")
-    p.add_argument("--as-samples", action="store_true", help="flatten (T,N,*) -> (T*N,*)")
+    p.add_argument("--dtype", default="float32", choices=["float32", "float64"], help="output dtype")
     args = p.parse_args()
 
-    if args.nproc is not None:
-        ranks = list(range(args.nproc))
-    else:
-        ranks = args.nproc
+    dtype = np.float32 if args.dtype == "float32" else np.float64
+    outdir = Path(args.outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
 
-    X_time, Y_time, info = fetch_xy_over_time(
-        x_fields=args.x_fields,
-        y_field=args.y_field,
-        ranks=ranks,
-        stride=args.stride,
-        start=args.start,
-        end=args.end,
-        dtype=np.float32,
-    )
+    client, _exp, _of_case_name, fn_name = connect()
 
-    if args.as_samples:
-        T, N, Fx = X_time.shape
-        Fy = Y_time.shape[-1]
-        X = X_time.reshape(T * N, Fx)
-        Y = Y_time.reshape(T * N, Fy)
-    else:
-        X, Y = X_time, Y_time
+    # read metadata to define time range
+    client.poll_dataset(fn_name + "_metadata", 10, 1000)
+    meta = client.get_dataset(fn_name + "_metadata")
+    meta_start, meta_end = _time_range_from_metadata(meta)
 
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    start = meta_start if args.start is None else args.start
+    end = meta_end if args.end is None else args.end
+    if start > end:
+        raise ValueError(f"start({start}) must be <= end({end})")
 
-    np.savez_compressed(out_path, X=X, Y=Y, **info)
-    print(f"[INFO] wrote {out_path}")
-    print(f"[INFO] X.shape={X.shape} Y.shape={Y.shape} (saved)")
+    time_indices = list(_iter_time_indices(start, end, args.stride))
+    print(f"[INFO] time indices: {time_indices[0]}..{time_indices[-1]} stride={args.stride} (count={len(time_indices)})")
+    print(f"[INFO] ranks: 0..{args.nproc-1}")
+
+    # Fetch each rank independently and write
+    for r in range(args.nproc):
+        Xr, Yr, kept_times = fetch_rank_over_time(
+            client=client,
+            fn_name=fn_name,
+            x_fields=args.x_fields,
+            y_field=args.y_field,
+            rank=r,
+            time_indices=time_indices,
+            dtype=dtype,
+        )
+
+        info = {
+            "fn_name": fn_name,
+            "rank": np.int32(r),
+            "nproc": np.int32(args.nproc),
+            "x_fields": np.array(args.x_fields, dtype=object),
+            "y_field": np.array([args.y_field], dtype=object),
+            "start": np.int32(start),
+            "end": np.int32(end),
+            "stride": np.int32(args.stride),
+            "kept_times": kept_times,
+            "X_shape": np.array(Xr.shape, dtype=np.int64),
+            "Y_shape": np.array(Yr.shape, dtype=np.int64),
+        }
+
+        out_path = outdir / f"cfd_xy_rank{r:04d}.npz"
+        np.savez_compressed(out_path, X=Xr, Y=Yr, **info)
+        print(f"[INFO] wrote {out_path}  X={Xr.shape}  Y={Yr.shape}  kept_times={len(kept_times)}")
+
+    print("[INFO] done (per-rank NPZ written)")
 
 
 if __name__ == "__main__":
