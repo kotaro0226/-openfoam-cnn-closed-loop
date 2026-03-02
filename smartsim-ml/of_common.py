@@ -16,9 +16,9 @@ def connect():
     #client = Client(address=addr, cluster=cluster)
     client = Client(address=addr, cluster=False)
 
-    exp = Experiment("ofrml", launcher="slurm", exp_path=os.environ.get("WORKD"))
+    #exp = Experiment("ofrml", launcher="slurm", exp_path=os.environ.get("WORKD"))
 
-    return client, exp, of_case_name, fn_name
+    return client, of_case_name, fn_name
 
 def get_field_name(client, fn_name, field_name, processor=0, timestep=None):
     client.poll_dataset(fn_name + "_metadata", 10, 1000)

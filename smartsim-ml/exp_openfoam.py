@@ -8,7 +8,7 @@ import numpy as np
 import jinja2 as jj
 
 from of_common import connect, get_field_name
-client, exp, of_case_name, fn_name = connect()
+client, of_case_name, fn_name = connect()
 
 polyMesh_dir = os.path.join(of_case_name, "constant", "polyMesh")
 
@@ -36,7 +36,7 @@ else:
 # --- solver (parallel) ---
 subprocess.run([
     "srun",
-    "--overlap",
+    #"--overlap",
     "--nodes", "2",
     "--ntasks", "112",
     "--ntasks-per-node", "56",
@@ -57,12 +57,5 @@ subprocess.run([
 #solve_model = exp.create_model("solve", solve_settings)
 #exp.generate(solve_model, overwrite=True)
 #exp.start(solve_model, summary=True, block=True)
-
-
-#subprocess.run([
-#    "srun", "-N", "2", "-n", "112",
-#    "buoyantBoussinesqPimpleFoam_ML", "-case", f"{of_case_name}", "-parallel"
-#], check=True)
-
 
 

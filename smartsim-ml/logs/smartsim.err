@@ -46,3 +46,12 @@ Run Arguments:
 	ntasks-per-node = 56
 
 01:29:57 frontier10410 smartsim.experiment {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [521905:MainThread] ERROR Job step solve failed to launch
+00:21:37 frontier10406 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] ERROR 
+00:21:37 frontier10406 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] ERROR Error while shutting down DB node. Return code: 1, err: Could not connect to Redis at 10.128.162.172:6379: Connection refused
+
+02:00:30 frontier10419 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] ERROR 
+02:00:30 frontier10419 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] ERROR Error while shutting down DB node. Return code: 1, err: Could not connect to Redis at 10.128.162.224:6379: Connection refused
+
+19:32:43 frontier10489 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] ERROR 
+19:32:43 frontier10489 smartsim._core.utils.redis {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] ERROR Error while shutting down DB node. Return code: 1, err: Could not connect to Redis at 10.128.163.248:6379: Connection refused
+

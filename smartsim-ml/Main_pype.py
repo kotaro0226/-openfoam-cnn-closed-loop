@@ -67,8 +67,9 @@ try:
         subprocess.run([
             "python", f"{WORKD}/utils/make_cfd_dataset.py",
             "--outdir", f"{DATAD}/of-raw-ranks",
+            "--start", "1",
             "--nproc", "112",
-            "--stride", "1"
+            "--workers", "112"
         ], check=True, env=env)
 
         if MKMAP:
@@ -77,7 +78,7 @@ try:
                 "python", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
                 "--case", f"{FOAM_RUN}",
                 "--rank-dir", f"{DATAD}/of-raw-ranks",
-                "--nproc", "112",
+                "--nproc", "4",
                 "--out", f"{DATAD}/of-raw/{DATA1}.npz",
             ], check=True, env=env)
 

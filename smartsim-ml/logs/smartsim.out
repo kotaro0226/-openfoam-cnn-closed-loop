@@ -507,3 +507,267 @@ Run Arguments:
 21:32:40 frontier00003 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2582707:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4157801.0
 21:32:40 frontier00003 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2582707:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.0.32']
 21:35:28 frontier00003 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2582707:MainThread] DEBUG Executing Popen cmd: /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-cli -h 10.128.0.32 -p 6379 shutdown
+21:55:28 frontier07041 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Working in previously created experiment
+21:55:28 frontier07041 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Running on allocation 4157843 gleaned from user environment
+21:55:28 frontier07041 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772333728154/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772333728154/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGR3VEKIY2HT --jobid 4157843 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+21:55:28 frontier07041 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Starting Task 863923
+21:55:30 frontier07041 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+21:55:31 frontier07041 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Launching orchestrator_0
+21:55:41 frontier07041 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4157843.0
+21:55:41 frontier07041 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [863857:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.110.24']
+23:37:45 frontier10406 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Working in previously created experiment
+23:37:45 frontier10406 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Running on allocation 4157930 gleaned from user environment
+23:37:45 frontier10406 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772339865478/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772339865478/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGR61Q0MUEG7 --jobid 4157930 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+23:37:45 frontier10406 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Starting Task 1045578
+23:37:47 frontier10406 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+23:37:48 frontier10406 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Launching orchestrator_0
+23:37:58 frontier10406 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4157930.0
+23:37:58 frontier10406 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.162.172']
+00:21:37 frontier10406 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1045511:MainThread] DEBUG Executing Popen cmd: /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-cli -h 10.128.162.172 -p 6379 shutdown
+01:14:52 frontier10419 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Working in previously created experiment
+01:14:52 frontier10419 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Running on allocation 4158017 gleaned from user environment
+01:14:52 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772345692396/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772345692396/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGR842V7NZA0 --jobid 4158017 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+01:14:52 frontier10419 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Starting Task 715525
+01:14:54 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+01:14:55 frontier10419 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [715456:MainThread] DEBUG Launching orchestrator_0
+01:15:23 frontier10419 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Working in previously created experiment
+01:15:23 frontier10419 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Running on allocation 4158019 gleaned from user environment
+01:15:23 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772345723040/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772345723040/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGR84GY0AN2T --jobid 4158019 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+01:15:23 frontier10419 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Starting Task 717716
+01:15:25 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+01:15:26 frontier10419 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Launching orchestrator_0
+01:15:36 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4158019.0
+01:15:36 frontier10419 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.162.224']
+02:00:30 frontier10419 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [717650:MainThread] DEBUG Executing Popen cmd: /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-cli -h 10.128.162.224 -p 6379 shutdown
+18:50:11 frontier10489 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Working in previously created experiment
+18:50:11 frontier10489 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Running on allocation 4159354 gleaned from user environment
+18:50:11 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772409011359/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772409011359/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGRUK3736P60 --jobid 4159354 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+18:50:11 frontier10489 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Starting Task 1433418
+18:50:13 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+18:50:14 frontier10489 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Launching orchestrator_0
+18:50:24 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4159354.0
+18:50:24 frontier10489 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.163.248']
+19:32:43 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing Popen cmd: /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-cli -h 10.128.163.248 -p 6379 shutdown
+19:32:43 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing Popen cmd: /usr/bin/scancel 4159354.0
+19:32:43 frontier10489 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Removing Task 1433418
+19:32:43 frontier10489 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Process terminated with kill 1433418
+19:32:43 frontier10489 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Process terminated with kill 1433419
+19:32:43 frontier10489 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1433352:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4159354.0
+20:11:56 frontier10487 smartsim._core.generation.generator {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Working in previously created experiment
+20:11:56 frontier10487 smartsim._core.launcher.step.slurmStep {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Running on allocation 4159454 gleaned from user environment
+20:11:56 frontier10487 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Executing command: /usr/bin/srun --output /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772413916138/database/orchestrator/orchestrator_0.out --error /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml/.smartsim/metadata/run_1772413916138/database/orchestrator/orchestrator_0.err --job-name orchestrator_0-DGRWAOF5X0ZE --jobid 4159454 --ntasks=1 --ntasks-per-node=1 /ccs/home/shunya/.conda/envs/gpu_env/bin/python -m smartsim._core.entrypoints.redis +orc-exe=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/bin/redis-server +conf-file=/autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/config/redis.conf +rai-module --loadmodule /autofs/nccs-svm1_home2/shunya/.conda/envs/gpu_env/lib/python3.11/site-packages/smartsim/_core/lib/redisai.so +name=orchestrator_0 +port=6379 +ifname=hsn0,hsn1,hsn2,hsn3
+20:11:56 frontier10487 smartsim._core.launcher.taskManager {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Starting Task 2771851
+20:11:58 frontier10487 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p --format=jobname,jobid
+20:11:59 frontier10487 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Launching orchestrator_0
+20:12:09 frontier10487 smartsim._core.utils.shell {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Executing Popen cmd: /usr/bin/sacct --noheader -p -b --jobs 4159454.0
+20:12:09 frontier10487 smartsim._core.control.controller {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [2771764:MainThread] DEBUG Orchestrator launched on nodes: ['10.128.163.240']
+11:36:56 frontier10384 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [201033:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+13:43:43 frontier10384 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [205320:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+13:45:57 frontier10384 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [208384:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+14:21:46 frontier10395 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [484028:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+14:24:34 frontier10395 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [487074:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+14:36:54 frontier10325 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [546469:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+14:43:40 frontier10384 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [214989:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:00:04 frontier10385 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [581021:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:06:52 frontier10366 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [606083:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:12:13 frontier10385 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [591739:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:15:22 frontier10406 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1085359:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:47:01 frontier10306 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [988133:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+15:48:10 frontier10306 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [990309:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
+16:55:57 frontier10490 SmartSim {/lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml} [1338101:MainThread] INFO 
+
+=== Launch Summary ===
+Experiment: ofrml
+Experiment Path: /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/smartsim-ml
+Launcher: slurm
+Database Status: launching
+
+=== Database ===
+Shards: 1
+Port: 6379
+Network: ['hsn0', 'hsn1', 'hsn2', 'hsn3']
+Batch Launch: None
+
+
