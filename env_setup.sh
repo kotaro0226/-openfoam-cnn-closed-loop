@@ -16,8 +16,6 @@ export DATAD="${HOMED}/data"
 export WORKD="${HOMED}/smartsim-ml"
 export SICKLE_ROOT="${HOMED}/sickle-of"
 export CASED="${HOMED}/TGStratifiedLES_ML"
-export FOAM_RUN="${HOMED}/${CASED}"
-export WM_PROJECT_USER_DIR="$FOAM_RUN"
 
 #OpenFOAM
 source /lustre/orion/scratch/shunya/gen053/src2/OpenFOAM-v2312/etc/bashrc
@@ -34,8 +32,9 @@ export MIOPEN_USER_DB_PATH="/tmp/${USER}/my-miopen-cache"
 export MIOPEN_CUSTOM_CACHE_DIR=${MIOPEN_USER_DB_PATH}
 rm -rf ${MIOPEN_USER_DB_PATH}
 mkdir -p ${MIOPEN_USER_DB_PATH}
-export SMARTSIM_LOG_LEVEL=developer
-export SR_LOG_LEVEL=DEBUG
-export SR_LOG_FILE=$HOMED/smartredis_client.log
+#SmartSIM debug
+#export SMARTSIM_LOG_LEVEL=developer
+#export SR_LOG_LEVEL=DEBUG
+#export SR_LOG_FILE=$HOMED/smartredis_client.log
 
 

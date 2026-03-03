@@ -33,7 +33,7 @@ from smartredis import Client
 import jinja2 as jj
 
 
-env = jj.Environment()
+env = jj.Environment(undefined=jj.StrictUndefined)
 
 
 def _connect_client() -> Client:
@@ -87,6 +87,34 @@ def _safe_render(template: str, **ctx: Any) -> str:
     return out
 
 
+def _render_context(*, timestep: int | None, processor: int, field_name: str) -> dict[str, Any]:
+    """Support multiple metadata naming conventions across functionObject versions."""
+    return {
+        "time_index": timestep,
+        "timeIndex": timestep,
+        "timestep": timestep,
+        "mpi_rank": processor,
+        "mpiRank": processor,
+        "rank": processor,
+        "processor": processor,
+        "name": field_name,
+        "patch": "internal",
+    }
+
+
+def _validate_resolved_name(name: str, what: str, template: str, *, rank: int, timestep: int | None) -> None:
+    if not name or not str(name).strip():
+        raise RuntimeError(
+            f"Resolved {what} is empty (rank={rank}, t={timestep}). "
+            f"template='{template}'"
+        )
+    if "{" in name or "}" in name:
+        raise RuntimeError(
+            f"Resolved {what} still has braces (rank={rank}, t={timestep}). "
+            f"template='{template}', resolved='{name}'"
+        )
+
+
 def _render_field_key(
     *,
     ds_template: str,
@@ -95,8 +123,12 @@ def _render_field_key(
     processor: int,
     timestep: int | None,
 ) -> str:
-    ds_name = _safe_render(ds_template, time_index=timestep, mpi_rank=processor)
-    f_name = _safe_render(field_template, name=field_name, patch="internal")
+    ctx = _render_context(timestep=timestep, processor=processor, field_name=field_name)
+    ds_name = _safe_render(ds_template, **ctx)
+    f_name = _safe_render(field_template, **ctx)
+
+    _validate_resolved_name(ds_name, "dataset name", ds_template, rank=processor, timestep=timestep)
+    _validate_resolved_name(f_name, "field name", field_template, rank=processor, timestep=timestep)
     return f"{{{ds_name}}}.{f_name}"
 
 
@@ -435,5 +467,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 

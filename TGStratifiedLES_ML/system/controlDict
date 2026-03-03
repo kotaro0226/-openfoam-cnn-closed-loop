@@ -20,13 +20,13 @@ FoamFile
 application     buoyantBoussinesqPimpleFoam;
 
 startFrom       startTime;
-startTime       0;
+startTime       5;
 stopAt          endTime;
-endTime         2;
+endTime         7;
 deltaT          1e-3;
 
 writeControl    timeStep;
-writeInterval   200;
+writeInterval   250;
 purgeWrite      0;
 libs            ("libutilityFunctionObjects.so");
 
@@ -50,6 +50,54 @@ functions
         fields (rAUf_ml phiHbyA_ml divPhiHbyA_f_ml pEqnFlux_ml);
         patches (internal);
     }
+
+//    mlTeacherFieldWriter
+//    {
+//        type        coded;
+//        libs        ("libutilityFunctionObjects.so");
+//        name        mlTeacherFieldWriter;
+//
+//        codeInclude
+//        #{
+//            #include "fvCFD.H"
+//        #};
+//
+//        codeExecute
+//        #{
+//            const fvMesh& m = mesh();
+//            const word outInst(time().timeName());
+//
+//            auto writeFaceField = [&](const word& srcName)
+//            {
+//                if (!m.foundObject<surfaceScalarField>(srcName))
+//                {
+//                    Warning<< "[mlTeacherFieldWriter] missing field: " << srcName << nl;
+//                    return;
+//                }
+//
+//                const surfaceScalarField& src = m.lookupObject<surfaceScalarField>(srcName);
+//                const word outName(srcName + "_teacher");
+//                surfaceScalarField out
+//                (
+//                    IOobject
+//                    (
+//                        outName,
+//                        outInst,
+//                        m,
+//                        IOobject::NO_READ,
+//                        IOobject::NO_WRITE
+//                    ),
+//                    src
+//                );
+//                out.write();
+//            };
+//
+//            writeFaceField("rAUf_ml");
+//            writeFaceField("phiHbyA_ml");
+//            writeFaceField("divPhiHbyA_f_ml");
+//            writeFaceField("pEqnFlux_ml");
+//        #};
+//    }
 
     KEavg
     {

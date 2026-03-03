@@ -11,8 +11,8 @@ EXE4 = 0        # 1: Exe train.py
 EXE5 = 0        # 1: Exe inference
 
 # NAMES
-DATA1 = "TGV_0-2"  #make dataset
-DATA2 = "TGV_0-2"  #subsampling target data
+DATA1 = "TGV_500-525"  #make dataset
+DATA2 = "TGV_500-525"  #subsampling target data
 DATA3 = "subsampled_ofCell_random_random"   #Train data
 
 from smartsim import Experiment
@@ -53,6 +53,9 @@ try:
     #client = Client(address=address, cluster=(NODES > 1))
     client = Client(address=address, cluster=False)
     print("DB address:", address)
+    addrs = db.get_address()
+    print("DB addrs:", addrs, "len=", len(addrs))
+    print("Will set SSDB_CLUSTER:", "1" if len(addrs) > 1 else "0")
 
     # --- Main ---
     import subprocess
@@ -67,21 +70,22 @@ try:
         subprocess.run([
             "python", f"{WORKD}/utils/make_cfd_dataset.py",
             "--outdir", f"{DATAD}/of-raw-ranks",
-            "--start", "1",
+            "--start", "5001",  # time indices=1/dt, Set initial time indices
             "--nproc", "112",
-            "--workers", "112"
+            "--workers", "56",
+            "--skip-on-error",
+        ], check=True, env=env)
+
+        subprocess.run([
+            "python", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
+            "--case", f"{FOAM_RUN}",
+            "--rank-dir", f"{DATAD}/of-raw-ranks",
+            "--nproc", "112",
+            "--out", f"{DATAD}/of-raw/{DATA1}.npz",
         ], check=True, env=env)
 
         if MKMAP:
             # ---- make maps ----
-            subprocess.run([
-                "python", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
-                "--case", f"{FOAM_RUN}",
-                "--rank-dir", f"{DATAD}/of-raw-ranks",
-                "--nproc", "4",
-                "--out", f"{DATAD}/of-raw/{DATA1}.npz",
-            ], check=True, env=env)
-
             # ---- make face maps ----
             subprocess.run([
                 "python", f"{WORKD}/utils/make_face_maps_from_C.py",
