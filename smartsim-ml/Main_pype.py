@@ -3,7 +3,7 @@
 # =========================
 # Switches
 # =========================
-EXE1 = 1        # 1: Exe exp_openfoam.py
+EXE1 = 0        # 1: Exe exp_openfoam.py
 EXE2 = 1        # 1: Exe make dataset & maps
 MKMAP = 0       # 1: EXE make maps
 EXE3 = 0        # 1: Exe subsampling
@@ -19,6 +19,7 @@ from smartsim import Experiment
 from smartredis import Client
 import os
 import subprocess
+from pathlib import Path
 #PORT = int(os.environ["PORT"])
 #IFACE = os.environ["IFACE"]
 HOMED = os.environ["HOMED"]
@@ -58,8 +59,6 @@ try:
     print("Will set SSDB_CLUSTER:", "1" if len(addrs) > 1 else "0")
 
     # --- Main ---
-    import subprocess
-
     #1 calc & put flow field
     if EXE1:
         subprocess.run(["python", "exp_openfoam.py"], check=True, env=env)
@@ -67,17 +66,17 @@ try:
 
     #2 Make dataset
     if EXE2:
-        subprocess.run([
-            "python", f"{WORKD}/utils/make_cfd_dataset.py",
-            "--outdir", f"{DATAD}/of-raw-ranks",
-            "--start", "5001",  # time indices=1/dt, Set initial time indices
-            "--nproc", "112",
-            "--workers", "56",
-            "--skip-on-error",
-        ], check=True, env=env)
+        #subprocess.run([
+        #    "python", f"{WORKD}/utils/make_cfd_dataset.py",
+        #    "--outdir", f"{DATAD}/of-raw-ranks",
+        #    "--start", "5001",  # time indices=1/dt, Set initial time indices
+        #    "--nproc", "112",
+        #    "--workers", "56",
+        #    "--skip-on-error",
+        #], check=True, env=env)
 
         subprocess.run([
-            "python", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
+            "python", "-u", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",
             "--case", f"{FOAM_RUN}",
             "--rank-dir", f"{DATAD}/of-raw-ranks",
             "--nproc", "112",
