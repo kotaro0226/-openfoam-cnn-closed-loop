@@ -1,0 +1,55 @@
+#!/usr/bin/bash
+
+orig_dir="$(pwd)"
+
+# Create the $FOAM_USER_LIBBIN if not existing.
+# - This happens with a fresh OpenFOAM installation.
+# - openfoam-smartsim libraries are placed into $FOAM_USER_LIBBIN
+if [ ! -d "$FOAM_USER_LIBBIN" ]; 
+then
+    mkdir -p $FOAM_USER_LIBBIN
+fi
+
+## Compile SmartRedis libs
+#export _REPO_ROOT="$(git rev-parse --show-toplevel)"
+export _REPO_ROOT="$orig_dir"
+cd "$_REPO_ROOT" || exit 1
+export FOAM_SMARTREDIS="$_REPO_ROOT/smartredis"
+if [ ! -d "$FOAM_SMARTREDIS" ]; then
+    git clone https://github.com/CrayLabs/SmartRedis "$FOAM_SMARTREDIS"
+else
+    cd "$FOAM_SMARTREDIS" || exit 1
+    git pull origin develop
+    cd "${_REPO_ROOT}" || exit 1
+fi
+cd "${FOAM_SMARTREDIS}" || exit 1
+
+# Force clean: ensures binaries match OpenFOAM's compiler. 
+make clean 
+
+# Set compiler options 
+if [ $WM_COMPILER ==  "Gcc" ]; then
+    echo "Using gcc and g++" 
+    export CC=gcc
+    export CXX=g++
+elif [ $WM_COMPILER == "Icx" ]; then
+    echo "Using icpx"
+    export CC=icx-cc
+    export CXX=icpx
+fi
+make lib
+cd "$_REPO_ROOT" || exit 1
+cp $FOAM_SMARTREDIS/install/lib64/libsmartredis.so $FOAM_USER_LIBBIN 
+cp $FOAM_SMARTREDIS/build/Release/hiredis-prefix/src/hiredis-build/libhiredis.a $FOAM_USER_LIBBIN
+cp $FOAM_SMARTREDIS/build/Release/redis++-prefix/src/redis++-build/libredis++.a $FOAM_USER_LIBBIN
+export FOAM_CODE_TEMPLATES=$_REPO_ROOT/etc/dynamicCode/
+
+## Compile OpenFOAM libs
+wmake libso src/smartRedis
+wmake libso src/functionObjects
+wmake libso src/displacementSmartSimMotionSolver
+
+## Compile OpenFOAM utilities
+wmake all applications 
+
+cd "$orig_dir" || exit 1
