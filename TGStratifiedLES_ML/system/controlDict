@@ -22,7 +22,7 @@ application     buoyantBoussinesqPimpleFoam;
 startFrom       startTime;
 startTime       5;
 stopAt          endTime;
-endTime         7;
+endTime         5.5;
 deltaT          1e-3;
 
 writeControl    timeStep;
@@ -46,6 +46,9 @@ functions
     {
         type fieldsToSmartRedis;
         libs ("libsmartredisFunctionObjects.so");
+        enabled true;
+        executeControl timeStep;
+        executeInterval 500;
         clusterMode off;
         fields (rAUf_ml phiHbyA_ml divPhiHbyA_f_ml pEqnFlux_ml);
         patches (internal);
@@ -103,6 +106,9 @@ functions
     {
         type            fieldExpression;
         libs            ("libfieldFunctionObjects.so");
+        enabled false;	// switch ON when exporting teacher fields to files
+        executeControl timeStep;
+        executeInterval 500;
 
         // Field expression: scalar average of kinetic energy
         valueType       scalar;
