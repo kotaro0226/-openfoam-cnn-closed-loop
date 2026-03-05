@@ -22,11 +22,11 @@ application     buoyantBoussinesqPimpleFoam;
 startFrom       startTime;
 startTime       5;
 stopAt          endTime;
-endTime         5.5;
+endTime         6;
 deltaT          1e-3;
 
 writeControl    timeStep;
-writeInterval   250;
+writeInterval   200;
 purgeWrite      0;
 libs            ("libutilityFunctionObjects.so");
 
@@ -47,8 +47,11 @@ functions
         type fieldsToSmartRedis;
         libs ("libsmartredisFunctionObjects.so");
         enabled true;
-        executeControl timeStep;
-        executeInterval 500;
+        executeControl      writeTime;
+        executeInterval     500;
+        writeControl        writeTime;
+        writeInterval       500;
+        timeStart 5.0;
         clusterMode off;
         fields (rAUf_ml phiHbyA_ml divPhiHbyA_f_ml pEqnFlux_ml);
         patches (internal);

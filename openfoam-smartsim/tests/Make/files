@@ -1,5 +1,0 @@
-$(FOAM_FOAMUT)/tests/testDriver.C
-
-smartRedisClientTests.C
-
-EXE = ./testDriver
