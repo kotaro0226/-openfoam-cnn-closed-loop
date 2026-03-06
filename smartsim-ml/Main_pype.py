@@ -3,7 +3,7 @@
 # =========================
 # Switches
 # =========================
-EXE1 = 0        # 1: Exe exp_openfoam.py
+EXE1 = 1        # 1: Exe exp_openfoam.py
 EXE2 = 1        # 1: Exe make dataset & maps
 MKMAP = 0       # 1: EXE make maps
 EXE3 = 0        # 1: Exe subsampling
@@ -11,8 +11,8 @@ EXE4 = 0        # 1: Exe train.py
 EXE5 = 0        # 1: Exe inference
 
 # NAMES
-DATA1 = "TGV_500-525"  #make dataset
-DATA2 = "TGV_500-525"  #subsampling target data
+DATA1 = "TGV_5-7"  #make dataset
+DATA2 = "TGV_5-7"  #subsampling target data
 DATA3 = "subsampled_ofCell_random_random"   #Train data
 
 from smartsim import Experiment
@@ -66,14 +66,17 @@ try:
 
     #2 Make dataset
     if EXE2:
-        #subprocess.run([
-        #    "python", f"{WORKD}/utils/make_cfd_dataset.py",
-        #    "--outdir", f"{DATAD}/of-raw-ranks",
-        #    "--start", "5001",  # time indices=1/dt, Set initial time indices
-        #    "--nproc", "112",
-        #    "--workers", "56",
-        #    "--skip-on-error",
-        #], check=True, env=env)
+        subprocess.run([
+            "python", f"{WORKD}/utils/make_cfd_dataset.py",
+            "--outdir", f"{DATAD}/of-raw-ranks",
+            "--start", "5500",  # time indices=1/dt, Set initial time indices
+            "--end", "7000",
+            "--stride", "500",
+            "--probe-step", "500",
+            "--nproc", "112",
+            "--workers", "56",
+            "--skip-on-error",
+        ], check=True, env=env)
 
         subprocess.run([
             "python", "-u", f"{WORKD}/utils/assemble_global_xy_from_procAddressing.py",

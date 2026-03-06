@@ -2,10 +2,6 @@
 """
 Fetch face-wise tensors from Redis (via SmartRedis) and write per-rank NPZ files.
 
-Revision note:
-- This _rev variant keeps fetch_rank_over_time() and _fetch_and_save_rank() signatures aligned
-  for multiprocessing calls (prevents unexpected keyword argument 'client' regressions).
-
 WHY per-rank?
 - In parallel OpenFOAM, Redis tensors are in *processor-local face ordering*.
 - Downstream subsampling expects *global internal face ordering* (top case neighbour).
@@ -17,6 +13,14 @@ IMPORTANT invariants for downstream mapping:
 - Never drop rows (faces). No masking that changes N.
 - Never trim to minN. If a timestep is inconsistent, skip the whole timestep.
 - Keep rank ordering exactly as in OpenFOAM processor mesh.
+
+IMPORTANT:
+- openfoam-smartsim metadata is assumed to contain naming templates only
+  ('dataset' and 'field').
+- This script does NOT read StartTimeIndex / EndTimeIndex / EndIndex from metadata.
+- Time range is determined by:
+    1) --start and --end if both are given
+    2) otherwise probing Redis datasets by time_index
 """
 
 from __future__ import annotations
@@ -70,17 +74,17 @@ def _fetch_metadata_templates(client: Client, fn_name: str) -> tuple[object, str
 
 
 def _safe_render(template: str, **ctx: Any) -> str:
-    # 1) Jinja2 template path
+    # 1) Jinja2 template
     if "{{" in template or "{%" in template:
         return env.from_string(template).render(**ctx)
 
-    # 2) Python format path
+    # 2) Python format
     try:
         return template.format(**ctx)
     except Exception:
         pass
 
-    # 3) Simple token replacement fallback
+    # 3) Simple fallback
     out = template
     for k, v in ctx.items():
         out = out.replace(f"{{{k}}}", str(v))
@@ -102,7 +106,9 @@ def _render_context(*, timestep: int | None, processor: int, field_name: str) ->
     }
 
 
-def _validate_resolved_name(name: str, what: str, template: str, *, rank: int, timestep: int | None) -> None:
+def _validate_resolved_name(
+    name: str, what: str, template: str, *, rank: int, timestep: int | None
+) -> None:
     if not name or not str(name).strip():
         raise RuntimeError(
             f"Resolved {what} is empty (rank={rank}, t={timestep}). "
@@ -132,8 +138,6 @@ def _render_field_key(
     return f"{{{ds_name}}}.{f_name}"
 
 
-
-
 def get_field_name(
     ds_template: str,
     field_template: str,
@@ -141,7 +145,6 @@ def get_field_name(
     processor: int = 0,
     timestep: int | None = None,
 ) -> str:
-    """Backward-compatible key builder kept to avoid NameError in mixed environments."""
     return _render_field_key(
         ds_template=ds_template,
         field_template=field_template,
@@ -149,7 +152,6 @@ def get_field_name(
         processor=processor,
         timestep=timestep,
     )
-
 
 
 def _is_transient_io_error(exc: Exception) -> bool:
@@ -190,6 +192,7 @@ def _get_tensor_with_retry(
             time.sleep(sleep_s)
             attempt += 1
 
+
 def _ensure_2d(a: np.ndarray) -> np.ndarray:
     """Ensure tensors are (N, C)."""
     a = np.asarray(a)
@@ -200,39 +203,6 @@ def _ensure_2d(a: np.ndarray) -> np.ndarray:
     return a.reshape(a.shape[0], -1)
 
 
-def _get_int_meta(meta, key: str, default: int | None = None) -> int | None:
-    try:
-        return int(meta.get_meta_strings(key)[0])
-    except Exception:
-        return default
-
-
-def _resolve_time_range(meta, start_override: int | None, end_override: int | None) -> tuple[int, int]:
-    """Resolve (start, end) while minimizing metadata lookups that spam SmartRedis errors."""
-    if start_override is not None and end_override is not None:
-        return start_override, end_override
-
-    if end_override is None:
-        end = _get_int_meta(meta, "EndTimeIndex", None)
-        if end is None:
-            end = _get_int_meta(meta, "EndIndex", None)
-        if end is None:
-            raise RuntimeError(
-                "Could not find EndTimeIndex (or EndIndex) in metadata. "
-                "Specify --end explicitly if your metadata schema differs."
-            )
-    else:
-        end = end_override
-
-    if start_override is None:
-        # Avoid hard failure/log spam when StartTimeIndex is absent on some FO builds.
-        start = _get_int_meta(meta, "StartTimeIndex", 0)
-    else:
-        start = start_override
-
-    return start, end
-
-
 def _nan_to_num_inplace(a: np.ndarray) -> np.ndarray:
     """Replace NaN/inf with 0 without changing shape."""
     return np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0, copy=False)
@@ -240,6 +210,130 @@ def _nan_to_num_inplace(a: np.ndarray) -> np.ndarray:
 
 def _iter_time_indices(start: int, end: int, stride: int) -> Iterable[int]:
     return range(start, end + 1, stride)
+
+
+def _dataset_name_for_probe(ds_template: str, *, rank: int, t: int) -> str:
+    """
+    Build the dataset name only for dataset_exists() probing.
+    """
+    ctx = _render_context(timestep=t, processor=rank, field_name="__dummy__")
+    ds_name = _safe_render(ds_template, **ctx)
+    _validate_resolved_name(ds_name, "dataset name", ds_template, rank=rank, timestep=t)
+    return ds_name
+
+
+def _discover_time_range_by_probe(
+    client: Client,
+    *,
+    ds_template: str,
+    probe_rank: int,
+    stride: int,
+    max_time_index: int,
+    start_hint: int = 0,
+) -> tuple[int, int]:
+    """
+    Discover [start, end] time_index range by checking dataset existence on one rank.
+
+    Rules:
+    - We never read start/end from metadata.
+    - We assume time_index is a non-negative integer.
+    - We probe only one rank (default rank 0) because naming convention is common.
+    """
+    if stride <= 0:
+        raise ValueError("stride must be >= 1")
+    if max_time_index < 0:
+        raise ValueError("max_time_index must be >= 0")
+    if start_hint < 0:
+        start_hint = 0
+
+    def exists(t: int) -> bool:
+        ds = _dataset_name_for_probe(ds_template, rank=probe_rank, t=t)
+        return bool(client.dataset_exists(ds))
+
+    # 1) find first existing index
+    first: int | None = None
+    t = start_hint
+    while t <= max_time_index:
+        if exists(t):
+            first = t
+            break
+        t += stride
+
+    if first is None:
+        raise RuntimeError(
+            f"Could not discover any dataset for probe_rank={probe_rank} "
+            f"in [{start_hint}, {max_time_index}] with stride={stride}. "
+            "Specify --start and --end explicitly."
+        )
+
+    # 2) exponential search for an upper bracket of the last existing index
+    hi_exist = first
+    step = stride
+    while True:
+        cand = hi_exist + step
+        if cand > max_time_index:
+            break
+        if exists(cand):
+            hi_exist = cand
+            step *= 2
+        else:
+            break
+
+    # 3) binary search on stride-aligned grid
+    left = hi_exist
+    right = min(max_time_index, hi_exist + step)
+
+    while left + stride <= right:
+        span = right - left
+        mid = left + ((span // (2 * stride)) * stride)
+        if mid == left:
+            mid = left + stride
+
+        if exists(mid):
+            left = mid
+        else:
+            right = mid - stride
+
+    last = left
+    return first, last
+
+
+def _resolve_time_range(
+    client: Client,
+    *,
+    ds_template: str,
+    start_override: int | None,
+    end_override: int | None,
+    probe_rank: int,
+    probe_step: int,
+    stride: int,
+    max_time_index: int,
+) -> tuple[int, int]:
+    """
+    Resolve (start, end) WITHOUT reading StartTimeIndex/EndTimeIndex metadata.
+
+    Priority:
+    1) If both --start and --end are given, use them directly.
+    2) Otherwise auto-discover by dataset probing.
+       - If only --start is given, keep it and probe end.
+       - If only --end is given, probe start and keep end.
+       - If neither is given, probe both.
+    """
+    if start_override is not None and end_override is not None:
+        return start_override, end_override
+
+    probed_start, probed_end = _discover_time_range_by_probe(
+        client,
+        ds_template=ds_template,
+        probe_rank=probe_rank,
+        stride=probe_step,
+        max_time_index=max_time_index,
+        start_hint=(start_override if start_override is not None else 0),
+    )
+
+    start = start_override if start_override is not None else probed_start
+    end = end_override if end_override is not None else probed_end
+    return start, end
 
 
 def fetch_rank_over_time(
@@ -276,7 +370,19 @@ def fetch_rank_over_time(
                     processor=rank,
                     timestep=t,
                 )
-                x_parts.append(_ensure_2d(_get_tensor_with_retry(client, key, max_retries=max_retries, retry_base_sec=retry_base_sec, retry_cap_sec=retry_cap_sec, rank=rank, timestep=t)).astype(dtype, copy=False))
+                x_parts.append(
+                    _ensure_2d(
+                        _get_tensor_with_retry(
+                            client,
+                            key,
+                            max_retries=max_retries,
+                            retry_base_sec=retry_base_sec,
+                            retry_cap_sec=retry_cap_sec,
+                            rank=rank,
+                            timestep=t,
+                        )
+                    ).astype(dtype, copy=False)
+                )
             x_r = np.concatenate(x_parts, axis=1)
 
             y_key = get_field_name(
@@ -286,7 +392,17 @@ def fetch_rank_over_time(
                 processor=rank,
                 timestep=t,
             )
-            y_r = _ensure_2d(_get_tensor_with_retry(client, y_key, max_retries=max_retries, retry_base_sec=retry_base_sec, retry_cap_sec=retry_cap_sec, rank=rank, timestep=t)).astype(dtype, copy=False)
+            y_r = _ensure_2d(
+                _get_tensor_with_retry(
+                    client,
+                    y_key,
+                    max_retries=max_retries,
+                    retry_base_sec=retry_base_sec,
+                    retry_cap_sec=retry_cap_sec,
+                    rank=rank,
+                    timestep=t,
+                )
+            ).astype(dtype, copy=False)
 
             if x_r.shape[0] != y_r.shape[0]:
                 raise RuntimeError(f"N mismatch: X={x_r.shape[0]} Y={y_r.shape[0]}")
@@ -397,8 +513,16 @@ def main() -> None:
     p.add_argument("--y-field", default="pEqnFlux_ml", help="Y field name (face-wise)")
     p.add_argument("--nproc", type=int, required=True, help="number of MPI ranks (processors)")
     p.add_argument("--stride", type=int, default=1, help="time stride")
-    p.add_argument("--start", type=int, default=None, help="override StartTimeIndex")
-    p.add_argument("--end", type=int, default=None, help="override EndTimeIndex")
+    p.add_argument("--start", type=int, default=None, help="override start time_index")
+    p.add_argument("--end", type=int, default=None, help="override end time_index")
+    p.add_argument("--probe-rank", type=int, default=0, help="rank used for auto-discovering time_index range")
+    p.add_argument(
+        "--probe-step",
+        type=int,
+        default=1,
+        help="time_index probing step for auto-discovery (independent of --stride)"
+    )
+    p.add_argument("--max-time-index", type=int, default=100000, help="upper bound for probing when start/end are not both given")
     p.add_argument("--dtype", default="float32", choices=["float32", "float64"], help="output dtype")
     p.add_argument("--compressed", action="store_true", help="write compressed .npz output")
     p.add_argument("--workers", type=int, default=4, help="number of worker processes for rank-wise fetch")
@@ -413,17 +537,34 @@ def main() -> None:
 
     fn_name = _get_fn_name(args.fn_name)
 
-    # Read metadata once and cache naming templates
+    # Read metadata once and cache naming templates only
     meta_client = _connect_client()
-    meta, ds_template, field_template = _fetch_metadata_templates(meta_client, fn_name)
-    start, end = _resolve_time_range(meta, args.start, args.end)
+    _meta, ds_template, field_template = _fetch_metadata_templates(meta_client, fn_name)
+
+    # Resolve time range without reading StartTimeIndex / EndTimeIndex metadata
+    start, end = _resolve_time_range(
+        meta_client,
+        ds_template=ds_template,
+        start_override=args.start,
+        end_override=args.end,
+        probe_rank=args.probe_rank,
+        probe_step=args.probe_step,
+        stride=args.stride,
+        max_time_index=args.max_time_index,
+    )
+
     if start > end:
         raise ValueError(f"start({start}) must be <= end({end})")
 
     time_indices = list(_iter_time_indices(start, end, args.stride))
+    if not time_indices:
+        raise RuntimeError("No time indices resolved.")
+
     print(f"[INFO] fn_name: {fn_name}")
+    print(f"[INFO] dataset template: {ds_template}")
+    print(f"[INFO] field template:   {field_template}")
     print(f"[INFO] time indices: {time_indices[0]}..{time_indices[-1]} stride={args.stride} (count={len(time_indices)})")
-    print(f"[INFO] ranks: 0..{args.nproc-1}")
+    print(f"[INFO] ranks: 0..{args.nproc - 1}")
     print(f"[INFO] workers: {args.workers}")
     print(f"[INFO] compression: {'on' if args.compressed else 'off'}")
     print(f"[INFO] max_retries: {args.max_retries} base={args.retry_base_sec}s cap={args.retry_cap_sec}s")
@@ -467,4 +608,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 

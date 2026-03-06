@@ -22,7 +22,7 @@ application     buoyantBoussinesqPimpleFoam;
 startFrom       startTime;
 startTime       5;
 stopAt          endTime;
-endTime         6;
+endTime         7;
 deltaT          1e-3;
 
 writeControl    timeStep;
@@ -33,77 +33,89 @@ libs            ("libutilityFunctionObjects.so");
 functions
 {
 
-//    pUPhiTest
-//    {
-//        type fieldsToSmartRedis;
-//        libs ("libsmartredisFunctionObjects.so");
-//        clusterMode off;
-//        fields (U p phi);
-//        patches (internal);
-//    }
+    pUPhiTest
+    {
+        type fieldsToSmartRedis;
+        libs ("libsmartredisFunctionObjects.so");
+        enabled false;
+        executeControl      runTime;
+        executeInterval     0.5;
+        writeControl        runTime;
+        writeInterval       0.5;
+        timeStart 0;
+        clusterMode off;
+        fields (U p phi);
+        patches (internal);
+    }
 
     pEqnInnerTest
     {
         type fieldsToSmartRedis;
         libs ("libsmartredisFunctionObjects.so");
         enabled true;
-        executeControl      writeTime;
-        executeInterval     500;
-        writeControl        writeTime;
-        writeInterval       500;
-        timeStart 5.0;
+        executeControl      runTime;
+        executeInterval     0.5;
+        writeControl        runTime;
+        writeInterval       0.5;
+        timeStart 0;
         clusterMode off;
         fields (rAUf_ml phiHbyA_ml divPhiHbyA_f_ml pEqnFlux_ml);
         patches (internal);
     }
 
-//    mlTeacherFieldWriter
-//    {
-//        type        coded;
-//        libs        ("libutilityFunctionObjects.so");
-//        name        mlTeacherFieldWriter;
-//
-//        codeInclude
-//        #{
-//            #include "fvCFD.H"
-//        #};
-//
-//        codeExecute
-//        #{
-//            const fvMesh& m = mesh();
-//            const word outInst(time().timeName());
-//
-//            auto writeFaceField = [&](const word& srcName)
-//            {
-//                if (!m.foundObject<surfaceScalarField>(srcName))
-//                {
-//                    Warning<< "[mlTeacherFieldWriter] missing field: " << srcName << nl;
-//                    return;
-//                }
-//
-//                const surfaceScalarField& src = m.lookupObject<surfaceScalarField>(srcName);
-//                const word outName(srcName + "_teacher");
-//                surfaceScalarField out
-//                (
-//                    IOobject
-//                    (
-//                        outName,
-//                        outInst,
-//                        m,
-//                        IOobject::NO_READ,
-//                        IOobject::NO_WRITE
-//                    ),
-//                    src
-//                );
-//                out.write();
-//            };
-//
-//            writeFaceField("rAUf_ml");
-//            writeFaceField("phiHbyA_ml");
-//            writeFaceField("divPhiHbyA_f_ml");
-//            writeFaceField("pEqnFlux_ml");
-//        #};
-//    }
+    mlTeacherFieldWriter
+    {
+        type        coded;
+        libs        ("libutilityFunctionObjects.so");
+        name        mlTeacherFieldWriter;
+        enabled false;
+        executeControl      writeTime;
+        executeInterval     1;
+        writeControl        writeTime;
+        writeInterval       1;
+        timeStart 5;
+
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+
+        codeExecute
+        #{
+            const fvMesh& m = mesh();
+            const word outInst(time().timeName());
+
+            auto writeFaceField = [&](const word& srcName)
+            {
+                if (!m.foundObject<surfaceScalarField>(srcName))
+                {
+                    Warning<< "[mlTeacherFieldWriter] missing field: " << srcName << nl;
+                    return;
+                }
+
+                const surfaceScalarField& src = m.lookupObject<surfaceScalarField>(srcName);
+                const word outName(srcName + "_teacher");
+                surfaceScalarField out
+                (
+                    IOobject
+                    (
+                        outName,
+                        outInst,
+                        m,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    src
+                );
+                out.write();
+            };
+
+            writeFaceField("rAUf_ml");
+            writeFaceField("phiHbyA_ml");
+            writeFaceField("divPhiHbyA_f_ml");
+            writeFaceField("pEqnFlux_ml");
+        #};
+    }
 
     KEavg
     {
