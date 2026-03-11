@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --gpus-per-node=8
 #SBATCH --cpus-per-task=7
-#SBATCH -t 00:45:00
+#SBATCH -t 02:00:00
 #SBATCH -o /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.out
 #SBATCH -e /lustre/orion/scratch/shunya/gen053/work/tmp/of-r-ml_3/out/%j/%x_%j.err
 
@@ -19,17 +19,22 @@ cd $WORKD
 #------------------------
 
 # Optional: tweak grid by env without editing script
-HIDDEN_GRID=${HIDDEN_GRID:-"16;32,32;32,32,32"}
+HIDDEN_GRID=${HIDDEN_GRID:-"32,32;32,64;32,128;64,64;64,128;128,128"}
 LR_GRID=${LR_GRID:-"1e-3"}
 DROPOUT_GRID=${DROPOUT_GRID:-"0.05"}
 LAMBDA_CONT_GRID=${LAMBDA_CONT_GRID:-"0.0,1.0"}
-EPOCHS=${EPOCHS:-3}
-BATCH=${BATCH:-8192}
+EPOCHS=${EPOCHS:-3000}
+BATCH=${BATCH:-8000}
 WHICH=${WHICH:-val}
 DDP_BACKEND=${DDP_BACKEND:-"nccl"}
 
 # Reuse existing subsampling output path from Main_pype.py
-CELL_NPZ=${CELL_NPZ:-"${DATAD}/sampled/subsampled_ofCell_random_random.npz"}
+DATA="TGV_5-25_fixed"
+#DATAD="subsampled_ofCell_random_random"
+CVNPZ=0
+CELL_NPZ=${CELL_NPZ:-"${DATAD}/of-raw_fixed/${DATA}.npz"}
+#CELL_NPZ=${CELL_NPZ:-"${DATAD}/of-raw/${DATA}.npz"}
+#CELL_NPZ=${CELL_NPZ:-"${DATAD}/sampled/${DATA}.npz"}
 
 mkdir -p "${DATAD}/grid"
 
@@ -41,15 +46,29 @@ USE_TORCHRUN=1
 USE_TORCHRUN=${USE_TORCHRUN:-0}
 
 
+if [ "$CVNPZ" = "1" ];then
+	echo "of-raw file fix & use"
+	mkdir -p ${DATAD}/of-raw_fixed
+	
+	python smartsim-ml/utils/add_cell_continuity_meta.py \
+	  --cell-npz ${CELL_NPZ}.npz \
+	  --cell-maps ${DATAD}/maps/cell_maps_rank0_internal.npz \
+	  --out ${DATAD}/of-raw_fixed/${DATA}_fixed.npz 
+
+	CELL_NPZ=${CELL_NPZ:-"${DATAD}/of-raw_fixed/${DATA}_fixed.npz"}
+	echo "Input NPZ file switched: ${CELL_NPZ}"
+fi
+
+
 if [ "$USE_TORCHRUN" = "1" ]; then
   NNODES=${SLURM_NNODES:-1}
   NTASKS=$((NNODES*8))
-  NPROC_PER_NODE=${SLURM_GPUS_PER_NODE:-1}
-  export MASTER_ADDR=$(hostname -i)
-  export NCCL_SOCKET_IFNAME=hsn0
-  export MASTER_PORT=3442
+  export NPROC_PER_NODE=${SLURM_GPUS_PER_NODE:-1}
+  echo "NODE : $NNODES"
+  echo "TASK : $NTASKS"
+  echo "PROC : $NPROC_PER_NODE"
 
-  time srun -N "${NNODES}" -n "${NTASKS}" --ntasks-per-node=8 \
+  time srun -N "${NNODES}" -n "${NTASKS}" -c 7 --ntasks-per-node=8 \
 	--gpus-per-task=1 --gpu-bind=closest \
     python -u train_grid.py \
       --ddp-backend "${DDP_BACKEND}" \
@@ -61,6 +80,7 @@ if [ "$USE_TORCHRUN" = "1" ]; then
       --epochs "$EPOCHS" \
       --batch "$BATCH" \
       --which "$WHICH" \
+      --num-workers "8" \
       --outdir "${DATAD}/grid" \
       --run-vis |& tee log.grid.txt
 else

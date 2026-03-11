@@ -3,7 +3,7 @@
 #SBATCH -J OFRML31
 #SBATCH -p extended
 ##SBATCH -p batch
-#SBATCH -N 2
+#SBATCH -N 1
 #SBATCH --ntasks-per-node=56
 #SBATCH --cpus-per-task=1
 ##SBATCH --ntasks-per-node=8

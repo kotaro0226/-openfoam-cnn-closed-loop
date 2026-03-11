@@ -3,17 +3,17 @@
 # =========================
 # Switches
 # =========================
-EXE1 = 1        # 1: Exe exp_openfoam.py
-EXE2 = 1        # 1: Exe make dataset & maps
+EXE1 = 0        # 1: Exe exp_openfoam.py
+EXE2 = 0        # 1: Exe make dataset & maps
 MKMAP = 0       # 1: EXE make maps
-EXE3 = 0        # 1: Exe subsampling
+EXE3 = 1        # 1: Exe subsampling
 EXE4 = 0        # 1: Exe train.py
 EXE5 = 0        # 1: Exe inference
 
 # NAMES
-DATA1 = "TGV_5-7"  #make dataset
-DATA2 = "TGV_5-7"  #subsampling target data
-DATA3 = "subsampled_ofCell_random_random"   #Train data
+DATA1 = "TGV_5-25"  #make dataset
+DATA2 = "TGV_5-25"  #subsampling target data
+DATA3 = "TGV_5-25_subsampled_random_random"   #Train data
 
 from smartsim import Experiment
 from smartredis import Client
@@ -70,9 +70,9 @@ try:
             "python", f"{WORKD}/utils/make_cfd_dataset.py",
             "--outdir", f"{DATAD}/of-raw-ranks",
             "--start", "5500",  # time indices=1/dt, Set initial time indices
-            "--end", "7000",
-            "--stride", "500",
-            "--probe-step", "500",
+            "--end", "25000",
+            "--stride", "500",      # write interval
+            "--probe-step", "500",  # read interval
             "--nproc", "112",
             "--workers", "56",
             "--skip-on-error",
@@ -142,7 +142,7 @@ try:
             # Output directory for subsampled NPZ
             "--output_dir", f"{DATAD}/sampled",
             # File name template (expanded inside SICKLE)
-            "--fileprefix", f"{DATA2}-cell_{hypercubes}_{method}",
+            "--fileprefix", f"{DATA2}_subsampled_random_random",
         ], check=True)
     
   

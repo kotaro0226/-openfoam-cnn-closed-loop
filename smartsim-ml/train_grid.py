@@ -2,8 +2,8 @@
 """Unified grid search for cell-wise MLP training + evaluation.
 
 DDP support:
-- Launch with torchrun for multi-node / multi-GPU execution.
-- Dataset/split/norm are initialized once logically (rank0 creates artifacts, others load).
+- Launch with srun on Frontier/Slurm.
+- Heavy split/norm preparation is done BEFORE init_process_group().
 - Training is distributed with DistributedSampler + DDP.
 - Final evaluation/CSV/JIT writing is done on rank0.
 """
@@ -13,7 +13,9 @@ import csv
 import itertools
 import os
 import subprocess
+import time
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import List
 
 import numpy as np
@@ -118,35 +120,108 @@ def append_summary_row(summary_csv: str, row: dict):
         w.writerow(row)
 
 
-def setup_dist(args):
-    rank_env = os.environ.get("RANK")
-    world_size_env = os.environ.get("WORLD_SIZE")
-    use_ddp = (not args.no_ddp) and rank_env is not None and world_size_env is not None and int(world_size_env) > 1
+def resolve_dist_env(args):
+    """Resolve rank/world/local_rank without initializing process group yet."""
+    rank_env = (
+        os.environ.get("RANK")
+        or os.environ.get("PMI_RANK")
+        or os.environ.get("SLURM_PROCID")
+    )
+    world_size_env = (
+        os.environ.get("WORLD_SIZE")
+        or os.environ.get("PMI_SIZE")
+        or os.environ.get("SLURM_NTASKS")
+    )
+
+    use_ddp = (
+        (not args.no_ddp)
+        and rank_env is not None
+        and world_size_env is not None
+        and int(world_size_env) > 1
+    )
 
     if not use_ddp:
         return False, 0, 1, 0
 
     rank = int(rank_env)
     world_size = int(world_size_env)
-    local_rank = int(os.environ.get("LOCAL_RANK", 0))
 
     backend = args.ddp_backend
     if backend == "nccl" and not torch.cuda.is_available():
         backend = "gloo"
 
-    dist.init_process_group(backend=backend, init_method="env://")
+    if backend == "nccl":
+        n_visible = torch.cuda.device_count()
+        if n_visible < 1:
+            raise RuntimeError("NCCL backend requested but no visible GPU was found.")
+        # Frontier + srun --gpus-per-task=1: each task typically sees exactly one GPU -> cuda:0
+        local_rank = 0 if n_visible == 1 else (rank % n_visible)
+    else:
+        local_rank = 0
+
     return True, rank, world_size, local_rank
 
 
-def cleanup_dist(is_dist: bool):
-    if is_dist and dist.is_initialized():
+def init_dist(args, rank: int, world_size: int, local_rank: int):
+    """Initialize torch.distributed after heavy preprocessing is done."""
+    master_addr = os.environ.get("MASTER_ADDR")
+    master_port = os.environ.get("MASTER_PORT")
+    if not master_addr or not master_port:
+        raise RuntimeError("MASTER_ADDR / MASTER_PORT are required for DDP.")
+
+    backend = args.ddp_backend
+    if backend == "nccl" and not torch.cuda.is_available():
+        backend = "gloo"
+
+    os.environ["RANK"] = str(rank)
+    os.environ["WORLD_SIZE"] = str(world_size)
+    os.environ["LOCAL_RANK"] = str(local_rank)
+
+    if backend == "nccl":
+        torch.cuda.set_device(local_rank)
+
+    print(
+        f"[DDP INIT] host={os.uname().nodename} "
+        f"rank={rank} world_size={world_size} local_rank={local_rank} "
+        f"master={master_addr}:{master_port}",
+        flush=True,
+    )
+
+    kwargs = dict(
+        backend=backend,
+        init_method="env://",
+        rank=rank,
+        world_size=world_size,
+        timeout=timedelta(hours=2),
+    )
+
+    if backend == "nccl":
+        kwargs["device_id"] = torch.device("cuda", local_rank)
+
+    dist.init_process_group(**kwargs)
+
+
+def barrier(is_dist: bool, local_rank: int = 0):
+    if not is_dist:
+        return
+    if dist.is_initialized() and torch.cuda.is_available():
+        dist.barrier(device_ids=[local_rank])
+    elif dist.is_initialized():
         dist.barrier()
+
+
+def cleanup_dist(is_dist: bool, local_rank: int = 0):
+    if is_dist and dist.is_initialized():
+        barrier(is_dist, local_rank)
         dist.destroy_process_group()
 
 
-def barrier(is_dist: bool):
-    if is_dist:
-        dist.barrier()
+def wait_for_file(path: str, sleep_sec: float = 2.0, timeout_sec: float = 7200.0):
+    t0 = time.time()
+    while not os.path.exists(path):
+        if time.time() - t0 > timeout_sec:
+            raise TimeoutError(f"Timed out waiting for file: {path}")
+        time.sleep(sleep_sec)
 
 
 def resolve_device(device_arg: str) -> torch.device:
@@ -236,7 +311,7 @@ def parse_args():
     p.add_argument("--pin-memory", action="store_true")
 
     p.add_argument("--ddp-backend", choices=["nccl", "gloo"], default="nccl")
-    p.add_argument("--no-ddp", action="store_true", help="disable DDP even if torchrun env exists")
+    p.add_argument("--no-ddp", action="store_true", help="disable DDP even if distributed env exists")
 
     p.add_argument("--outdir", default=f"{DATAD}/grid")
     p.add_argument("--summary-csv", default="")
@@ -248,7 +323,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    is_dist, rank, world_size, local_rank = setup_dist(args)
+    is_dist, rank, world_size, local_rank = resolve_dist_env(args)
 
     repo_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(repo_dir)
@@ -259,27 +334,41 @@ def main():
 
     if rank == 0:
         print(f"[INFO] Number of trials: {len(trials)}")
-        print(f"[INFO] DDP enabled={is_dist} world_size={world_size}")
+        print(f"[INFO] DDP requested={is_dist} world_size={world_size}")
 
     os.makedirs(args.outdir, exist_ok=True)
     os.makedirs(os.path.dirname(args.shared_split_npz) or ".", exist_ok=True)
 
     device = resolve_device(args.device)
     if device.type == "cuda":
-        torch.cuda.set_device(local_rank if is_dist else 0)
-        device = torch.device("cuda", local_rank if is_dist else 0)
+        visible_count = torch.cuda.device_count()
+        if visible_count < 1:
+            raise RuntimeError("CUDA/HIP device was requested, but no visible GPU was found.")
+        device = torch.device("cuda", local_rank)
+        print(
+            f"[DEVICE] rank={rank} local_rank={local_rank} "
+            f"visible_cuda_count={visible_count} "
+            f"CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')} "
+            f"ROCR_VISIBLE_DEVICES={os.environ.get('ROCR_VISIBLE_DEVICES')} "
+            f"device={device}",
+            flush=True,
+        )
+
     pin_memory = bool(args.pin_memory) and device.type == "cuda"
 
+    # ------------------------------------------------------------------
+    # Heavy preprocessing BEFORE DDP init
+    # ------------------------------------------------------------------
     dataset, input_shape, output_shape = sickle_xy_cell(args.cell_npz)
     n_total = len(dataset)
-    if rank == 0:
-        print(f"[INFO] Loaded dataset once-per-rank: Ncells={n_total}")
+    print(f"[INFO] rank={rank} Loaded dataset once-per-rank: Ncells={n_total}", flush=True)
 
     tr, va, te = _parse_split(args.split)
+
     if rank == 0:
         if os.path.exists(args.shared_split_npz):
             train_idx, val_idx, test_idx = load_split(args.shared_split_npz)
-            print(f"[INFO] loaded split: {args.shared_split_npz}")
+            print(f"[INFO] loaded split: {args.shared_split_npz}", flush=True)
         else:
             train_idx, val_idx, test_idx = make_split_indices(n_total, tr, va, te, args.seed)
             save_split(
@@ -289,10 +378,11 @@ def main():
                 test_idx,
                 meta={"N": n_total, "split": args.split, "seed": args.seed, "is_cell": 1},
             )
-            print(f"[INFO] saved split: {args.shared_split_npz}")
-    barrier(is_dist)
-    if rank != 0:
+            print(f"[INFO] saved split: {args.shared_split_npz}", flush=True)
+    else:
+        wait_for_file(args.shared_split_npz)
         train_idx, val_idx, test_idx = load_split(args.shared_split_npz)
+        print(f"[INFO] loaded split: {args.shared_split_npz}", flush=True)
 
     ds_train = Subset(dataset, train_idx)
     ds_val = Subset(dataset, val_idx)
@@ -317,12 +407,38 @@ def main():
             y_std,
             meta={"fit_on": "train", "split": args.split, "seed": args.seed, "is_cell": 1},
         )
-        print(f"[INFO] fitted shared normalization once: {shared_norm_npz}")
-    barrier(is_dist)
+        print(f"[INFO] fitted shared normalization once: {shared_norm_npz}", flush=True)
+    else:
+        wait_for_file(shared_norm_npz)
+
     x_mean, x_std, y_mean, y_std = load_norm(shared_norm_npz, device=str(device))
 
-    train_sampler = DistributedSampler(ds_train, num_replicas=world_size, rank=rank, shuffle=True) if is_dist else None
-    val_sampler = DistributedSampler(ds_val, num_replicas=world_size, rank=rank, shuffle=False) if is_dist else None
+    # ------------------------------------------------------------------
+    # Initialize DDP only after split/norm are ready
+    # ------------------------------------------------------------------
+    if is_dist:
+        init_dist(args, rank, world_size, local_rank)
+        if rank == 0:
+            print(f"[INFO] DDP enabled=True world_size={world_size}", flush=True)
+
+    loader_val = None
+    loader_eval_rank0 = None
+    train_sampler = None
+    val_sampler = None
+
+    if is_dist:
+        train_sampler = DistributedSampler(
+            ds_train,
+            num_replicas=world_size,
+            rank=rank,
+            shuffle=True,
+        )
+        val_sampler = DistributedSampler(
+            ds_val,
+            num_replicas=world_size,
+            rank=rank,
+            shuffle=False,
+        )
 
     loader_val = DataLoader(
         ds_val,
@@ -333,8 +449,6 @@ def main():
         pin_memory=pin_memory,
     )
 
-    # rank0-only full eval loader (no distributed sharding)
-    loader_eval_rank0 = None
     if rank == 0:
         loader_eval_rank0 = DataLoader(
             ds_eval,
@@ -356,13 +470,20 @@ def main():
             os.makedirs(run_dir, exist_ok=True)
             print("=" * 80)
             print(f"[INFO] Trial {idx}/{len(trials)}: {trial.run_name}")
-        barrier(is_dist)
+        barrier(is_dist, local_rank)
 
         run_args = argparse.Namespace(**vars(args))
         run_args.hidden = trial.hidden
         run_args.dropout = trial.dropout
         base_model = _build_model(run_args, (args.fields_per_face,)).to(device)
-        model = DDP(base_model, device_ids=[device.index] if (is_dist and device.type == "cuda") else None) if is_dist else base_model
+
+        if is_dist:
+            if device.type == "cuda":
+                model = DDP(base_model, device_ids=[local_rank], output_device=local_rank)
+            else:
+                model = DDP(base_model)
+        else:
+            model = base_model
 
         criterion = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=trial.lr)
@@ -461,7 +582,8 @@ def main():
                     f"val_loss={val_loss:.6e}"
                 )
 
-        barrier(is_dist)
+        barrier(is_dist, local_rank)
+
         if rank == 0:
             save_norm(norm_path, x_mean, x_std, y_mean, y_std, meta={"from": "shared_norm", "run": trial.run_name})
 
@@ -537,7 +659,7 @@ def main():
             append_summary_row(summary_csv, summary_row)
             print(f"[INFO] appended summary to: {summary_csv}")
 
-        barrier(is_dist)
+        barrier(is_dist, local_rank)
 
     if rank == 0 and args.run_vis:
         vis_cmd = [
@@ -560,9 +682,10 @@ def main():
         print("[INFO] Grid-search done.")
         print(f"[INFO] Summary CSV: {summary_csv}")
 
-    cleanup_dist(is_dist)
+    cleanup_dist(is_dist, local_rank)
 
 
 if __name__ == "__main__":
     main()
+
 

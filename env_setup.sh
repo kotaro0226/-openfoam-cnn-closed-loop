@@ -28,10 +28,14 @@ export WM_CXX=CC
 #SmartSIM
 #export PORT=7000
 #export IFACE="lo"   # localhost
+export MASTER_ADDR=$(hostname -i)
+export NCCL_SOCKET_IFNAME=hsn0
+export MASTER_PORT=3442
 export MIOPEN_USER_DB_PATH="/tmp/${USER}/my-miopen-cache"
 export MIOPEN_CUSTOM_CACHE_DIR=${MIOPEN_USER_DB_PATH}
 rm -rf ${MIOPEN_USER_DB_PATH}
 mkdir -p ${MIOPEN_USER_DB_PATH}
+
 #SmartSIM debug
 #export SMARTSIM_LOG_LEVEL=developer
 #export SR_LOG_LEVEL=DEBUG
