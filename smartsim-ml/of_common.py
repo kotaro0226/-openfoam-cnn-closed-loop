@@ -7,19 +7,18 @@ from smartredis import Client
 env = jj.Environment()
 
 def connect():
-    """Return (client, exp, db, of_case_name, fn_name)."""
-    PORT = int(os.environ["PORT"])
-    IFACE = os.environ["IFACE"]
     of_case_name = os.environ["CASED"]
-    #fn_name = "pUPhiTest"
     fn_name = "pEqnInnerTest"
 
-    exp = Experiment("ofrml", launcher="local")
-    db = exp.create_database(port=PORT, interface=IFACE)
+    addr = os.environ["SSDB"]                 # "host:port"
+    cluster = (os.environ.get("SSDB_CLUSTER","0") == "1")
 
-    client = Client(address=f"localhost:{PORT}", cluster=False)
+    #client = Client(address=addr, cluster=cluster)
+    client = Client(address=addr, cluster=False)
 
-    return client, exp, db, of_case_name, fn_name
+    #exp = Experiment("ofrml", launcher="slurm", exp_path=os.environ.get("WORKD"))
+
+    return client, of_case_name, fn_name
 
 def get_field_name(client, fn_name, field_name, processor=0, timestep=None):
     client.poll_dataset(fn_name + "_metadata", 10, 1000)
