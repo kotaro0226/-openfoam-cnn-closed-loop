@@ -193,6 +193,35 @@ def _get_tensor_with_retry(
             attempt += 1
 
 
+def _get_dataset_tensor_with_retry(
+    client: Client,
+    *,
+    ds_name: str,
+    tensor_name: str,
+    max_retries: int,
+    retry_base_sec: float,
+    retry_cap_sec: float,
+    rank: int,
+    timestep: int,
+) -> np.ndarray:
+    attempt = 0
+    while True:
+        try:
+            ds = client.get_dataset(ds_name)
+            return ds.get_tensor(tensor_name)
+        except Exception as e:
+            if (not _is_transient_io_error(e)) or attempt >= max_retries:
+                raise
+            sleep_s = min(retry_cap_sec, retry_base_sec * (2 ** attempt))
+            print(
+                f"[WARN] transient Redis dataset/tensor error rank={rank} t={timestep} "
+                f"dataset={ds_name} tensor={tensor_name} attempt={attempt + 1}/{max_retries}; "
+                f"retry in {sleep_s:.2f}s: {e}"
+            )
+            time.sleep(sleep_s)
+            attempt += 1
+
+
 def _ensure_2d(a: np.ndarray) -> np.ndarray:
     """Ensure tensors are (N, C)."""
     a = np.asarray(a)
@@ -319,8 +348,24 @@ def _resolve_time_range(
        - If only --end is given, probe start and keep end.
        - If neither is given, probe both.
     """
+    def any_exists(start_i: int, end_i: int) -> bool:
+        if start_i > end_i:
+            return False
+        for t in range(start_i, end_i + 1, max(1, probe_step)):
+            ds = _dataset_name_for_probe(ds_template, rank=probe_rank, t=t)
+            if client.dataset_exists(ds):
+                return True
+        return False
+
     if start_override is not None and end_override is not None:
-        return start_override, end_override
+        if any_exists(start_override, end_override):
+            return start_override, end_override
+        print(
+            f"[WARN] No dataset found in explicit time range [{start_override}, {end_override}] "
+            f"for probe_rank={probe_rank}; falling back to auto-discovery."
+        )
+        start_override = None
+        end_override = None
 
     probed_start, probed_end = _discover_time_range_by_probe(
         client,
@@ -361,20 +406,23 @@ def fetch_rank_over_time(
 
     for t in time_indices:
         try:
+            ctx = _render_context(timestep=t, processor=rank, field_name="__dummy__")
+            ds_name = _safe_render(ds_template, **ctx)
+            _validate_resolved_name(ds_name, "dataset name", ds_template, rank=rank, timestep=t)
+
             x_parts = []
             for xf in x_fields:
-                key = get_field_name(
-                    ds_template=ds_template,
-                    field_template=field_template,
-                    field_name=xf,
-                    processor=rank,
-                    timestep=t,
+                f_name = _safe_render(
+                    field_template,
+                    **_render_context(timestep=t, processor=rank, field_name=xf),
                 )
+                _validate_resolved_name(f_name, "field name", field_template, rank=rank, timestep=t)
                 x_parts.append(
                     _ensure_2d(
-                        _get_tensor_with_retry(
+                        _get_dataset_tensor_with_retry(
                             client,
-                            key,
+                            ds_name=ds_name,
+                            tensor_name=f_name,
                             max_retries=max_retries,
                             retry_base_sec=retry_base_sec,
                             retry_cap_sec=retry_cap_sec,
@@ -385,17 +433,16 @@ def fetch_rank_over_time(
                 )
             x_r = np.concatenate(x_parts, axis=1)
 
-            y_key = get_field_name(
-                ds_template=ds_template,
-                field_template=field_template,
-                field_name=y_field,
-                processor=rank,
-                timestep=t,
+            y_name = _safe_render(
+                field_template,
+                **_render_context(timestep=t, processor=rank, field_name=y_field),
             )
+            _validate_resolved_name(y_name, "field name", field_template, rank=rank, timestep=t)
             y_r = _ensure_2d(
-                _get_tensor_with_retry(
+                _get_dataset_tensor_with_retry(
                     client,
-                    y_key,
+                    ds_name=ds_name,
+                    tensor_name=y_name,
                     max_retries=max_retries,
                     retry_base_sec=retry_base_sec,
                     retry_cap_sec=retry_cap_sec,
@@ -608,5 +655,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

@@ -134,6 +134,39 @@ def main() -> None:
     dbg(f"[INFO] rank0: T={T}, Nint_local={N0}, Fx={Fx}, Fy={Fy}, kept_times={len(kept0)}  (dt={time.time()-t0:.2f}s)")
 
     # -----------------------------
+    # Fast path: serial/local case without processor0 decomposition
+    # In a 1-rank run, rank0 face ordering already matches the top-case internal face axis.
+    # -----------------------------
+    proc0_poly = case / f"{args.processor_prefix}0" / "constant" / "polyMesh"
+    if args.nproc == 1 and not proc0_poly.exists():
+        dbg("[INFO] processor0 polyMesh not found for nproc=1; using rank0 NPZ as global internal ordering.")
+        if N0 != Nf_global:
+            raise RuntimeError(
+                f"Serial fast-path requires rank0 NPZ N={N0} to match Nf_global_internal={Nf_global}."
+            )
+
+        global_to_compact = np.arange(Nf_global, dtype=np.int64)
+        compact_to_global = np.arange(Nf_global, dtype=np.int64)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            out_path,
+            X=np.nan_to_num(X0, nan=0.0, posinf=0.0, neginf=0.0),
+            Y=np.nan_to_num(Y0, nan=0.0, posinf=0.0, neginf=0.0),
+            kept_times=kept0.astype(np.int32, copy=False),
+            Nf_global_internal=np.int64(Nf_global),
+            global_to_compact=global_to_compact,
+            compact_to_global=compact_to_global,
+            nproc=np.int32(args.nproc),
+            note=np.array(
+                ["Serial fast-path: rank0 NPZ already uses the global internal-face ordering."],
+                dtype=object,
+            ),
+        )
+        dbg(f"[INFO] wrote {out_path} via serial fast-path")
+        dbg(f"[INFO] X.shape={X0.shape}  Y.shape={Y0.shape}")
+        return
+
+    # -----------------------------
     # Pass 1: determine which global internal faces are available
     # Also cache per-rank addressing (Nint_r, gids[:Nint_r]) to reuse in Pass2.
     # -----------------------------
@@ -342,6 +375,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
 

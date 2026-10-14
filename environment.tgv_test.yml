@@ -1,0 +1,32 @@
+name: TGV_test
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - absl-py
+      - fluidfoam==0.2.5
+      - h5py
+      - jinja2
+      - matplotlib
+      - mpi4py
+      - netcdf4
+      - networkx
+      - numpy==1.26.4
+      - pandas
+      - psutil
+      - pyfoam==2023.7
+      - pydmd==0.4.1
+      - pyyaml
+      - requests
+      - scikit-learn
+      - scipy
+      - smartredis==0.6.1
+      - smartsim==0.8.0
+      - sympy
+      - tabulate
+      - torch==2.4.0
+      - torchaudio==2.4.0
+      - torchvision==0.19.0
+      - tqdm

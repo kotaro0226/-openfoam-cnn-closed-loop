@@ -60,6 +60,16 @@ Description
 #include "CorrectPhi.H"
 #include "fvOptions.H"
 #include "pimpleControl.H"
+#include "sigFpe.H"
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <dlfcn.h>
+#include <fstream>
+#include <limits>
+#include <string>
+#include <vector>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -94,6 +104,11 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
+        const char* writeTimingEnv = std::getenv("ML_WRITE_TIMING");
+        const bool writeMlTiming =
+            writeTimingEnv != nullptr && word(writeTimingEnv) != "0";
+        const auto mlStepStart = std::chrono::steady_clock::now();
+
         #include "readDyMControls.H"
         #include "CourantNo.H"
         #include "setDeltaT.H"
@@ -195,11 +210,23 @@ int main(int argc, char *argv[])
             }
 	    //
 
+            #include "writeCnnInput.H"
+
+            #include "writeCnnFlux.H"
 
             // --- Pressure corrector loop
+            const auto mlPressureStart = std::chrono::steady_clock::now();
             while (pimple.correct())
             {
                 #include "pEqn.H"
+            }
+            const auto mlPressureEnd = std::chrono::steady_clock::now();
+            if (writeMlTiming)
+            {
+                const double pressureMs =
+                    std::chrono::duration<double, std::milli>(mlPressureEnd - mlPressureStart).count();
+                Info<< "[ML_TIMING] time=" << runTime.timeName()
+                    << " pressure_corrector_total_ms=" << pressureMs << nl << endl;
             }
 
 	    //
@@ -215,6 +242,15 @@ int main(int argc, char *argv[])
         }
 
         runTime.write();
+
+        if (writeMlTiming)
+        {
+            const auto mlStepEnd = std::chrono::steady_clock::now();
+            const double stepMs =
+                std::chrono::duration<double, std::milli>(mlStepEnd - mlStepStart).count();
+            Info<< "[ML_TIMING] time=" << runTime.timeName()
+                << " timestep_total_ms=" << stepMs << nl << endl;
+        }
 
         runTime.printExecutionTime(Info);
     }
